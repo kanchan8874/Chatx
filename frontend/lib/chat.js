@@ -1,4 +1,4 @@
-import { serverFetch } from "./api-client";
+import { serverFetch } from "./api-client-server";
 
 export async function fetchChats() {
   try {
