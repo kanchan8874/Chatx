@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# ChatX Monorepo
 
-## Getting Started
+Premium real-time chat experience split into dedicated frontend and backend apps.
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+chatx/
+├── frontend/   # Next.js (App Router) UI + Socket.io client
+└── backend/    # Express + MongoDB + Socket.io server
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prerequisites
+- Node.js 18+
+- MongoDB running locally (default: `mongodb://127.0.0.1:27017/chatx`)
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Environment variables
+The root `.env` file is shared by both apps.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017/chatx
+JWT_SECRET=change_this_in_production
+BACKEND_PORT=4000
+CLIENT_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_SOCKET_URL=http://localhost:4000
+```
 
-## Learn More
+## Install dependencies
+```bash
+# Frontend deps
+cd frontend
+npm install
 
-To learn more about Next.js, take a look at the following resources:
+# Backend deps
+cd ../backend
+npm install
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Run locally
+```bash
+# Terminal 1 - backend
+cd backend
+npm run dev
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Terminal 2 - frontend
+cd frontend
+npm run dev
+```
+- Backend runs on http://localhost:4000
+- Frontend runs on http://localhost:3000
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deploy notes
+- Deploy backend (Express) as Node service and expose `/api/*` + Socket.io
+- Deploy frontend (Next.js) separately and set `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_SOCKET_URL` envs to the backend URL
