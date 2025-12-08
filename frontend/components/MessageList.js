@@ -32,8 +32,13 @@ export default function MessageList({
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typingUsers]);
 
+  // Remove duplicate messages based on ID
+  const uniqueMessages = messages.filter((message, index, self) => 
+    index === self.findIndex((m) => m.id === message.id)
+  );
+
   // Group messages by day
-  const grouped = messages.reduce((acc, message) => {
+  const grouped = uniqueMessages.reduce((acc, message) => {
     const key = formatDay(message.createdAt);
     if (!acc[key]) acc[key] = [];
     acc[key].push(message);
@@ -55,7 +60,11 @@ export default function MessageList({
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent via-dark-bg/50 to-transparent px-4 py-6 md:px-8"
+      className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent via-dark-bg/50 to-transparent px-2 py-4 sm:px-4 sm:py-6 md:px-8"
+      role="log"
+      aria-label="Message list"
+      aria-live="polite"
+      aria-atomic="false"
     >
       {isLoading && (
         <div className="space-y-4">
@@ -70,30 +79,33 @@ export default function MessageList({
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="flex h-full items-center justify-center py-12"
+          role="status"
+          aria-live="polite"
         >
           <div className="text-center">
-            <div className="mb-4 text-6xl">💬</div>
-            <p className="text-lg font-semibold text-dark-text">No messages yet</p>
-            <p className="mt-2 text-sm text-dark-muted">Say hello to start the conversation 👋</p>
+            <div className="mb-4 text-4xl sm:text-6xl" aria-hidden="true">💬</div>
+            <p className="text-base font-semibold text-dark-text sm:text-lg">No messages yet</p>
+            <p className="mt-2 text-sm text-dark-muted sm:text-base">Say hello to start the conversation 👋</p>
           </div>
         </motion.div>
       )}
 
       <AnimatePresence>
         {Object.entries(grouped).map(([day, dayMessages]) => (
-          <motion.div
+          <motion.section
             key={day}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mb-8"
+            className="mb-6 sm:mb-8"
+            aria-label={`Messages from ${day}`}
           >
             {/* Day Separator */}
-            <div className="mb-6 flex items-center justify-center">
-              <div className="glass-strong rounded-full px-4 py-1.5">
-                <span className="text-xs font-medium uppercase tracking-wider text-dark-muted">
+            <div className="mb-4 flex items-center justify-center sm:mb-6">
+              <div className="glass-strong rounded-full px-3 py-1 sm:px-4 sm:py-1.5">
+                <time className="text-xs font-medium uppercase tracking-wider text-dark-muted sm:text-sm">
                   {day}
-                </span>
+                </time>
               </div>
             </div>
 
@@ -105,9 +117,12 @@ export default function MessageList({
                 const showAvatar = !isOwn && index === 0 || 
                   (index > 0 && dayMessages[index - 1].sender?.id !== message.sender?.id);
 
+                // Ensure unique key: use message.id + index as fallback
+                const uniqueKey = message.id || `${message._id || message.createdAt}-${index}`;
+
                 return (
                   <MessageBubble
-                    key={message.id}
+                    key={uniqueKey}
                     message={message}
                     isOwn={isOwn}
                     sender={showAvatar ? sender : null}
@@ -115,7 +130,7 @@ export default function MessageList({
                 );
               })}
             </div>
-          </motion.div>
+          </motion.section>
         ))}
       </AnimatePresence>
 

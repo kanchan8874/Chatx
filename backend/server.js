@@ -8,12 +8,19 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import chatRoutes from "./routes/chat.js";
 import messageRoutes from "./routes/messages.js";
+import uploadRoutes from "./routes/upload.js";
+import debugRoutes from "./routes/debug.js";
 import { initSocketServer } from "./socket/server.js";
+import { connectDB } from "./lib/db.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
+// Load .env from backend folder first, then try root folder
+dotenv.config({ path: path.resolve(__dirname, ".env") });
+if (!process.env.MONGODB_URI) {
+  dotenv.config({ path: path.resolve(__dirname, "../.env") });
+}
 
 const app = express();
 const PORT = process.env.BACKEND_PORT || 4000;
@@ -35,6 +42,11 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use("/api/debug", debugRoutes); // Debug routes (remove in production)
+
+// Serve uploaded files statically
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use((err, req, res, next) => {
   console.error("Unhandled backend error", err);
@@ -42,8 +54,26 @@ app.use((err, req, res, next) => {
 });
 
 const server = http.createServer(app);
-initSocketServer(server);
 
-server.listen(PORT, () => {
-  console.log(`⚡️ Backend running at http://localhost:${PORT}`);
-});
+// Initialize Socket.io server
+initSocketServer(server);
+console.log("🔌 Socket.io server ready");
+
+// Connect to MongoDB before starting server
+async function startServer() {
+  try {
+   
+    await connectDB();
+    console.log("✅ MongoDB connected successfully!");
+    
+    server.listen(PORT, () => {
+      console.log(`⚡️ Backend running at http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("❌ MongoDB connection failed:", error.message);
+    console.error("💡 Make sure MongoDB is running and MONGODB_URI is correct in .env file");
+    process.exit(1);
+  }
+}
+
+startServer();

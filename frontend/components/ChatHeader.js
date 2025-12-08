@@ -17,11 +17,12 @@ export default function ChatHeader({ chat, onlineUsers = [], onBack }) {
       <motion.header
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-panel flex items-center justify-between border-b border-white/10 px-6 py-4"
+      className="glass-panel flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-6 sm:py-4"
+      role="banner"
       >
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-primary-400">ChatX</p>
-          <h2 className="text-xl font-semibold text-dark-text">
+        <h2 className="text-lg font-semibold text-dark-text sm:text-xl">
             Select a chat to start messaging
           </h2>
         </div>
@@ -38,18 +39,20 @@ export default function ChatHeader({ chat, onlineUsers = [], onBack }) {
     <motion.header
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-panel flex items-center justify-between border-b border-white/10 px-6 py-4"
+      className="glass-panel flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-6 sm:py-4"
+      role="banner"
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         {/* Back Button (Mobile) */}
         {onBack && (
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onBack}
-            className="glass-strong mr-2 rounded-xl p-2 text-dark-muted transition-colors hover:bg-white/10 hover:text-dark-text lg:hidden"
+            className="glass-strong mr-2 rounded-xl p-2 text-dark-muted transition-colors hover:bg-white/10 hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg lg:hidden"
+            aria-label="Go back to chat list"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -65,14 +68,16 @@ export default function ChatHeader({ chat, onlineUsers = [], onBack }) {
 
         {/* User Info */}
         <div>
-          <h3 className="text-lg font-semibold text-dark-text">{peer?.username || "Unknown"}</h3>
+          <h3 className="text-base font-semibold text-dark-text sm:text-lg">{peer?.username || "Unknown"}</h3>
           <div className="flex items-center gap-2">
             <div
               className={`h-2 w-2 rounded-full ${
                 isOnline ? "bg-accent-500 animate-pulse-slow" : "bg-dark-muted"
               }`}
+              aria-label={isOnline ? "Online" : "Offline"}
+              role="status"
             />
-            <p className="text-xs text-dark-muted">
+            <p className="text-xs text-dark-muted sm:text-sm">
               {isOnline
                 ? "Online"
                 : chat.lastMessage?.createdAt
@@ -88,10 +93,12 @@ export default function ChatHeader({ chat, onlineUsers = [], onBack }) {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="glass-strong rounded-xl px-4 py-2 text-xs font-medium text-dark-muted transition-colors hover:bg-white/10 hover:text-dark-text"
+          className="glass-strong rounded-xl px-4 py-2 text-xs font-medium text-dark-muted transition-colors hover:bg-white/10 hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg"
+          aria-label="Secure chat information"
+          title="End-to-end encrypted"
         >
           <span className="flex items-center gap-2">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

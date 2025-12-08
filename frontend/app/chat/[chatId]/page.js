@@ -9,10 +9,17 @@ export default async function ChatDetailPage({ params }) {
     redirect("/login");
   }
 
+  // Next.js 16: params is now a Promise, must await it
+  const { chatId } = await params;
+
+  if (!chatId) {
+    notFound();
+  }
+
   const [chats, chat, messagesPayload] = await Promise.all([
     fetchChats(),
-    fetchChat(params.chatId),
-    fetchMessages(params.chatId, { limit: 60 }),
+    fetchChat(chatId),
+    fetchMessages(chatId, { limit: 60 }),
   ]);
 
   if (!chat) {
@@ -25,7 +32,7 @@ export default async function ChatDetailPage({ params }) {
         user={user}
         initialChats={chats}
         initialMessages={messagesPayload.messages}
-        activeChatId={params.chatId}
+        activeChatId={chatId}
       />
     </main>
   );

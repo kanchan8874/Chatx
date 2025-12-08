@@ -22,8 +22,11 @@ export default function SearchBox({ onSearch, placeholder = "Search chats...", c
       animate={{ opacity: 1, y: 0 }}
       className={`relative ${className}`}
     >
+      <label htmlFor="search-input" className="sr-only">
+        {placeholder || "Search"}
+      </label>
       <div
-        className={`glass-strong relative flex items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-300 ${
+        className={`glass-strong relative flex items-center gap-2 rounded-2xl px-3 py-2.5 transition-all duration-300 sm:gap-3 sm:px-4 sm:py-3 ${
           isFocused
             ? "ring-2 ring-primary-500/50 shadow-glow-primary"
             : "hover:ring-1 hover:ring-white/20"
@@ -31,12 +34,13 @@ export default function SearchBox({ onSearch, placeholder = "Search chats...", c
       >
         {/* Search Icon */}
         <svg
-          className={`h-5 w-5 transition-colors duration-300 ${
+          className={`h-4 w-4 transition-colors duration-300 sm:h-5 sm:w-5 ${
             isFocused ? "text-primary-400" : "text-dark-muted"
           }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path
             strokeLinecap="round"
@@ -48,13 +52,15 @@ export default function SearchBox({ onSearch, placeholder = "Search chats...", c
 
         {/* Input */}
         <input
-          type="text"
+          id="search-input"
+          type="search"
           value={value}
           onChange={handleChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-sm text-dark-text placeholder-dark-muted outline-none"
+          className="flex-1 bg-transparent text-sm text-dark-text placeholder-dark-muted outline-none focus:ring-0 sm:text-base"
+          aria-label={placeholder || "Search"}
         />
 
         {/* Clear Button */}
@@ -67,9 +73,11 @@ export default function SearchBox({ onSearch, placeholder = "Search chats...", c
               setValue("");
               onSearch?.("");
             }}
-            className="rounded-full p-1 text-dark-muted transition-colors hover:bg-white/10 hover:text-dark-text"
+            className="rounded-full p-1.5 text-dark-muted transition-colors hover:bg-white/10 hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg"
+            aria-label="Clear search"
+            title="Clear search"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

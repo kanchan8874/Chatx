@@ -51,8 +51,8 @@ module.exports = {
           bg: "#0F0F11",
           surface: "#1A1A1D",
           border: "#2A2A2E",
-          text: "#E4E4E7",
-          muted: "#9CA3AF",
+          text: "#E4E4E7", // WCAG AA compliant (4.5:1 contrast on dark bg)
+          muted: "#B4B8C0", // Improved contrast from #9CA3AF for better readability
         },
         glass: {
           light: "rgba(255, 255, 255, 0.08)",

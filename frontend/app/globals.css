@@ -126,8 +126,65 @@ body {
   color: #fff;
 }
 
-/* Focus Styles */
+/* WCAG Compliant Focus Styles */
 *:focus-visible {
-  outline: 2px solid rgba(109, 93, 251, 0.5);
-  outline-offset: 2px;
+  outline: 3px solid #6D5DFB;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Ensure interactive elements have proper focus */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid #6D5DFB;
+  outline-offset: 3px;
+}
+
+/* Skip to main content link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #6D5DFB;
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 100;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Ensure minimum touch target size (44x44px) */
+button,
+a,
+input[type="button"],
+input[type="submit"],
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Improve text contrast for WCAG AA compliance */
+.text-dark-muted {
+  color: #9CA3AF; /* Improved contrast ratio */
+}
+
+/* Screen reader only class */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

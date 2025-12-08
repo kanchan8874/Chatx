@@ -5,14 +5,14 @@ import AuthForm from "@/components/AuthForm";
 
 export default function LoginPageClient() {
   return (
-    <main className="flex min-h-screen w-full items-center justify-center p-6">
-      <div className="flex w-full max-w-6xl items-center gap-16">
+    <main className="flex min-h-screen w-full items-center justify-center p-4 sm:p-6" role="main">
+      <div className="flex w-full max-w-6xl flex-col items-center gap-8 lg:flex-row lg:gap-16">
         {/* Left Side - Feature Showcase */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          className="hidden flex-1 flex-col space-y-6 lg:flex"
+          className="hidden flex-1 flex-col space-y-4 lg:flex lg:space-y-6"
         >
           <div className="glass-panel p-10">
             <motion.p
@@ -23,11 +23,11 @@ export default function LoginPageClient() {
             >
               ChatX
             </motion.p>
-            <h1 className="mb-4 text-4xl font-bold leading-tight text-dark-text">
+            <h1 className="mb-4 text-2xl font-bold leading-tight text-dark-text sm:text-3xl lg:text-4xl">
               Real-time messaging built for{" "}
               <span className="text-gradient">product teams</span>.
             </h1>
-            <p className="mb-8 text-lg text-dark-muted">
+            <p className="mb-6 text-base text-dark-muted sm:mb-8 sm:text-lg">
               ChatX combines secure messaging, typing indicators, delivery states, and
               presence into a single dashboard.
             </p>

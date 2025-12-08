@@ -13,17 +13,41 @@ export function useSocket(user) {
       return undefined;
     }
 
+    // Use window.location.origin for same-origin, fallback to env or localhost
     const socketUrl =
       process.env.NEXT_PUBLIC_SOCKET_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      "http://localhost:4000";
+      (typeof window !== "undefined" ? window.location.origin.replace(":3000", ":4000") : "http://localhost:4000");
+
+    console.log(`🔌 Connecting to Socket.io server at: ${socketUrl}`);
 
     const socketInstance = io(socketUrl, {
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"], // Try polling first, then upgrade to websocket
       withCredentials: true,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      forceNew: false,
       auth: {
         userId: user.id,
       },
+    });
+
+    // Add error handlers
+    socketInstance.on("connect_error", (error) => {
+      console.error("❌ Socket connection error:", error.message);
+      console.error("   Socket URL:", socketUrl);
+      console.error("   Error details:", error);
+    });
+
+    socketInstance.on("connect", () => {
+      console.log("✅ Socket.io connected successfully");
+    });
+
+    socketInstance.on("disconnect", (reason) => {
+      console.log("⚠️ Socket.io disconnected:", reason);
     });
 
     socketRef.current = socketInstance;

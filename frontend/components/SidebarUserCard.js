@@ -24,17 +24,19 @@ export default function SidebarUserCard({
   const lastMessage = chat.lastMessage;
 
   return (
-    <motion.div
+    <motion.button
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       whileHover={{ x: 4 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`group relative cursor-pointer rounded-2xl p-4 transition-all duration-300 ${
+      className={`group relative w-full cursor-pointer rounded-2xl p-4 text-left transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg ${
         isActive
           ? "bg-gradient-primary shadow-glow-primary"
           : "glass hover:bg-white/10 hover:shadow-lg"
       }`}
+      aria-label={`Chat with ${otherUser?.username || "Unknown User"}${unreadCount > 0 ? `, ${unreadCount} unread message${unreadCount > 1 ? "s" : ""}` : ""}`}
+      aria-pressed={isActive}
     >
       <div className="flex items-center gap-3">
         {/* Avatar with Online Status */}
@@ -112,7 +114,7 @@ export default function SidebarUserCard({
       {!isActive && (
         <div className="absolute -inset-0.5 -z-10 rounded-2xl bg-gradient-primary opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-20" />
       )}
-    </motion.div>
+    </motion.button>
   );
 }
 

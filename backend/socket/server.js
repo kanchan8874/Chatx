@@ -68,23 +68,38 @@ export function initSocketServer(server) {
     cors: {
       origin: SOCKET_ORIGIN,
       credentials: true,
+      methods: ["GET", "POST"],
     },
+    transports: ["polling", "websocket"], // Try polling first, then upgrade
+    allowEIO3: true,
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
+  console.log(`🔌 Socket.io server initialized on ${SOCKET_ORIGIN}`);
+
   io.on("connection", async (socket) => {
+    console.log(`🔌 New socket connection: ${socket.id}`);
+    
     const currentUserId = await resolveUserId(socket);
+    console.log(`   User ID: ${currentUserId || "Unauthenticated"}`);
 
     if (currentUserId) {
       onlineUsers.set(currentUserId, socket.id);
       broadcastOnlineUsers();
+      console.log(`✅ User ${currentUserId} is now online`);
+    } else {
+      console.log("⚠️ Unauthenticated socket connection");
     }
 
     registerRoomEvents(socket, currentUserId);
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", (reason) => {
+      console.log(`🔌 Socket disconnected: ${socket.id}, reason: ${reason}`);
       if (currentUserId) {
         onlineUsers.delete(currentUserId);
         broadcastOnlineUsers();
+        console.log(`   User ${currentUserId} is now offline`);
       }
     });
   });

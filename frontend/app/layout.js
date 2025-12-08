@@ -20,13 +20,21 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" data-scroll-behavior="smooth">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+        <meta name="theme-color" content="#0F0F11" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}
       >
+        {/* Skip to main content link for keyboard navigation */}
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <div className="relative min-h-screen overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 bg-chat-pattern opacity-30" />
-          <div className="relative z-10 min-h-screen">
+          <div className="pointer-events-none absolute inset-0 bg-chat-pattern opacity-30" aria-hidden="true" />
+          <div id="main-content" className="relative z-10 min-h-screen">
             {children}
           </div>
         </div>

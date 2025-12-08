@@ -62,7 +62,14 @@ router.get("/:chatId", async (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  const chat = await getChatById(req.params.chatId, user.id);
+  const { chatId } = req.params;
+  
+  // Validate chatId
+  if (!chatId || chatId === "undefined" || chatId === "null") {
+    return res.status(400).json({ error: "Invalid chat ID" });
+  }
+
+  const chat = await getChatById(chatId, user.id);
   if (!chat) {
     return res.status(404).json({ error: "Chat not found" });
   }

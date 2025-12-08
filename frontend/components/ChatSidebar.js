@@ -7,6 +7,7 @@ import UserBadge from "./UserBadge";
 import SearchBox from "./SearchBox";
 import SidebarUserCard from "./SidebarUserCard";
 import ThemeToggle from "./ThemeToggle";
+import ProfileDropdown from "./ProfileDropdown";
 
 function getPeer(chat, currentUserId) {
   return (
@@ -62,30 +63,21 @@ export default function ChatSidebar({
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       className="flex h-full w-full max-w-sm flex-col border-r border-white/10 bg-dark-surface/80 backdrop-blur-2xl"
+      aria-label="Chat list sidebar"
     >
       {/* User Profile Section */}
-      <div className="glass-panel m-4 mb-6 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <UserBadge
+      <header className="glass-panel m-4 mb-6 p-4" role="banner">
+        <div className="flex items-center justify-between gap-3">
+          <ProfileDropdown
               user={currentUser}
               isOnline={onlineUsers.includes(currentUser?.id)}
-              size="md"
-              showStatus={true}
-            />
-            <div>
-              <p className="text-xs text-dark-muted">Logged in as</p>
-              <p className="text-sm font-semibold text-dark-text">
-                {currentUser?.username || "User"}
-              </p>
-            </div>
-          </div>
+          />
           <ThemeToggle />
         </div>
-      </div>
+      </header>
 
       {/* Search Box */}
-      <div className="px-4">
+      <div className="px-3 sm:px-4">
         <SearchBox
           onSearch={setQuery}
           placeholder="Search chats..."
@@ -118,37 +110,40 @@ export default function ChatSidebar({
       </div>
 
       {/* Chat List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <nav className="flex-1 overflow-y-auto px-4 pb-4" aria-label="Chat list">
         {filteredChats.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="mt-16 text-center"
+            role="status"
+            aria-live="polite"
           >
-            <p className="text-sm text-dark-muted">
+            <p className="text-sm text-dark-muted sm:text-base">
               {query ? "No chats match your search." : "Start a chat to get going."}
             </p>
           </motion.div>
         ) : (
-          <div className="space-y-2">
+          <ul className="space-y-2" role="list">
             {filteredChats.map((chat, index) => {
               const peer = getPeer(chat, currentUser?.id);
               const isOnline = onlineUsers.includes(peer?.id);
 
               return (
+                <li key={chat.id}>
                 <SidebarUserCard
-                  key={chat.id}
                   chat={chat}
                   user={currentUser}
                   isActive={activeChatId === chat.id}
                   isOnline={isOnline}
                   onClick={() => onSelectChat?.(chat.id)}
                 />
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
-      </div>
+      </nav>
     </motion.aside>
   );
 }

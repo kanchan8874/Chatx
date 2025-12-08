@@ -5,8 +5,8 @@ import AuthForm from "@/components/AuthForm";
 
 export default function RegisterPageClient() {
   return (
-    <main className="flex min-h-screen w-full items-center justify-center p-6">
-      <div className="flex w-full max-w-5xl flex-col items-center gap-12 md:flex-row">
+    <main className="flex min-h-screen w-full items-center justify-center p-4 sm:p-6" role="main">
+      <div className="flex w-full max-w-5xl flex-col items-center gap-8 sm:gap-12 md:flex-row">
         {/* Left Side - Benefits */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
@@ -23,7 +23,7 @@ export default function RegisterPageClient() {
             >
               Why ChatX
             </motion.p>
-            <h1 className="text-4xl font-bold text-dark-text">
+            <h1 className="text-2xl font-bold text-dark-text sm:text-3xl lg:text-4xl">
               Secure, scalable,{" "}
               <span className="text-gradient">real-time chat</span> in minutes.
             </h1>

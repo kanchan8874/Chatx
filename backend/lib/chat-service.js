@@ -31,6 +31,7 @@ function formatMessage(messageDoc) {
         : messageDoc.chat?.toString()),
     text: messageDoc.text,
     sender,
+    attachments: messageDoc.attachments || [],
     readBy: (messageDoc.readBy || []).map((reader) =>
       reader?._id?.toString() || reader?.toString(),
     ),
@@ -121,6 +122,16 @@ export async function getChatsForUser(userId) {
 }
 
 export async function getChatById(chatId, userId) {
+  // Validate chatId
+  if (!chatId || chatId === "undefined" || chatId === "null") {
+    return null;
+  }
+
+  // Validate ObjectId format
+  if (!mongoose.Types.ObjectId.isValid(chatId)) {
+    return null;
+  }
+
   const chat = await Chat.findOne({
     _id: chatId,
     members: userId,
@@ -168,11 +179,12 @@ export async function getMessagesForChat(chatId, options = {}) {
   };
 }
 
-export async function createMessage({ chatId, senderId, text }) {
+export async function createMessage({ chatId, senderId, text, attachments = [] }) {
   const message = await Message.create({
     chat: chatId,
     sender: senderId,
-    text,
+    text: text || "",
+    attachments: attachments || [],
     readBy: [senderId],
   });
 

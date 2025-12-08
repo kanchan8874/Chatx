@@ -5,13 +5,17 @@ import User from "../models/User.js";
 export const AUTH_COOKIE_NAME = "chatx_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
+// Cookie options for development (localhost)
+// Note: localhost:3000 and localhost:4000 are considered same-site by browsers
+// So we can use sameSite: "lax" which works for same-site requests
 const baseCookieOptions = {
-  httpOnly: true,
-  sameSite: "lax",
-  secure: process.env.NODE_ENV === "production",
-  path: "/",
-  maxAge: COOKIE_MAX_AGE,
-};
+    httpOnly: true,
+  sameSite: "lax", // "lax" works for same-site (localhost is same-site regardless of port)
+  secure: false, // false for localhost HTTP
+    path: "/",
+    maxAge: COOKIE_MAX_AGE,
+  // Don't set domain - allows cookie to work across localhost ports
+  };
 
 export function sanitizeUser(userDoc) {
   if (!userDoc) {
@@ -25,6 +29,7 @@ export function sanitizeUser(userDoc) {
     username: user.username,
     email: user.email,
     avatar: user.avatar,
+    phone: user.phone || "",
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -50,17 +55,50 @@ export async function getUserFromToken(token) {
 }
 
 export async function getUserFromRequest(request) {
-  const token =
-    request.cookies?.[AUTH_COOKIE_NAME] ||
-    request.headers.authorization?.replace("Bearer ", "") ||
-    null;
+  // Try multiple ways to get the token
+  let token = null;
+  
+  // Method 1: From parsed cookies (cookie-parser)
+  if (request.cookies?.[AUTH_COOKIE_NAME]) {
+    token = request.cookies[AUTH_COOKIE_NAME];
+  }
+  
+  // Method 2: From raw cookie header (fallback)
+  if (!token && request.headers?.cookie) {
+    const cookies = request.headers.cookie.split(";").reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split("=");
+      acc[key] = value;
+      return acc;
+    }, {});
+    token = cookies[AUTH_COOKIE_NAME];
+  }
+  
+  // Method 3: From Authorization header
+  if (!token && request.headers?.authorization) {
+    token = request.headers.authorization.replace("Bearer ", "");
+  }
+
+  if (!token) {
+    return null;
+  }
 
   return getUserFromToken(token);
 }
 
 export function attachAuthCookie(response, userId) {
   const token = signJwt({ sub: userId });
-  response.cookie(AUTH_COOKIE_NAME, token, baseCookieOptions);
+  const cookieOptions = { ...baseCookieOptions };
+  
+  console.log(`🍪 Setting cookie: ${AUTH_COOKIE_NAME}`);
+  console.log(`   Options:`, {
+    httpOnly: cookieOptions.httpOnly,
+    sameSite: cookieOptions.sameSite,
+    secure: cookieOptions.secure,
+    path: cookieOptions.path,
+    maxAge: cookieOptions.maxAge,
+  });
+  
+  response.cookie(AUTH_COOKIE_NAME, token, cookieOptions);
   return response;
 }
 

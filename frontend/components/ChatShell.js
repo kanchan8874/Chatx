@@ -94,7 +94,12 @@ export default function ChatShell({
       });
 
       if (message.chatId === activeChatId) {
-        setMessages((prev) => [...prev, message]);
+        setMessages((prev) => {
+          // Check if message already exists to prevent duplicates
+          const exists = prev.some((m) => m.id === message.id || m._id === message._id);
+          if (exists) return prev;
+          return [...prev, message];
+        });
       }
     };
     const handleChatRefresh = ({ chatId, message }) => {
@@ -161,7 +166,12 @@ export default function ChatShell({
           throw new Error("Unable to load messages.");
         }
         const data = await response.json();
-        setMessages(data.messages || []);
+        const loadedMessages = data.messages || [];
+        // Remove duplicates based on ID
+        const uniqueMessages = loadedMessages.filter((message, index, self) => 
+          index === self.findIndex((m) => (m.id === message.id) || (m._id === message._id))
+        );
+        setMessages(uniqueMessages);
       } catch (error) {
         toast.error(error.message);
       } finally {
@@ -177,10 +187,11 @@ export default function ChatShell({
     loadMessages(chatId);
   };
 
-  const handleSendMessage = async (text) => {
+  const handleSendMessage = async (text, attachments = []) => {
     const payload = {
       chatId: activeChatId,
       text,
+      attachments: attachments || [],
     };
 
     const response = await fetch(`${apiBase}/api/messages`, {
@@ -226,7 +237,10 @@ export default function ChatShell({
   };
 
   return (
-    <section className="glass-panel flex h-[calc(100vh-4rem)] overflow-hidden">
+    <section 
+      className="glass-panel flex h-[calc(100vh-4rem)] flex-col overflow-hidden sm:flex-row"
+      aria-label="Chat interface"
+    >
       <ChatSidebar
         chats={chats}
         activeChatId={activeChatId}
@@ -235,7 +249,7 @@ export default function ChatShell({
         currentUser={user}
         onlineUsers={onlineUsers}
       />
-      <div className="flex flex-1 flex-col bg-sidebar/30">
+      <main className="flex flex-1 flex-col bg-sidebar/30" role="main">
         <ChatHeader
           chat={activeChat ? { ...activeChat, currentUserId: user?.id } : null}
           onlineUsers={onlineUsers}
@@ -276,16 +290,16 @@ export default function ChatShell({
               <p className="text-sm font-semibold uppercase tracking-[0.4em] text-primary-400">
                 ChatX
               </p>
-              <h2 className="mt-4 text-3xl font-bold text-dark-text">
+              <h2 className="mt-4 text-xl font-bold text-dark-text sm:text-2xl md:text-3xl">
                 Choose a chat or start a new conversation
               </h2>
-              <p className="mt-2 text-sm text-dark-muted">
+              <p className="mt-2 text-sm text-dark-muted sm:text-base">
                 Chats, typing indicators, and delivery receipts update in real time.
               </p>
             </div>
           </motion.div>
         )}
-      </div>
+      </main>
     </section>
   );
 }

@@ -58,24 +58,50 @@ export default function AuthForm({ mode = "login" }) {
       mode === "login" ? `${apiBase}/api/auth/login` : `${apiBase}/api/auth/register`;
 
     try {
+      // Validate form data
+      if (!form.email || !form.password) {
+        throw new Error("Email and password are required.");
+      }
+
+      console.log(`🔐 ${mode === "login" ? "Login" : "Register"} attempt:`, {
+        email: form.email,
+        endpoint,
+      });
+
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        headers: { 
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email.trim(),
+          password: form.password,
+          ...(mode === "register" ? { username: form.username.trim(), avatar: form.avatar } : {}),
+        }),
         credentials: "include",
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Something went wrong.");
+        console.error(`❌ ${mode === "login" ? "Login" : "Register"} failed:`, data);
+        throw new Error(data.error || "Something went wrong.");
       }
+
+      console.log(`✅ ${mode === "login" ? "Login" : "Register"} successful:`, data.user?.email);
 
       toast.success(
         mode === "login" ? "Welcome back to ChatX!" : "Account created successfully!",
       );
-      router.replace("/chat");
-      router.refresh();
+      
+      // Wait for cookie to be set in browser
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      
+      // Use window.location for full page reload to ensure server-side can read cookie
+      // This ensures cookie is properly available for server-side rendering
+      window.location.href = "/chat";
     } catch (error) {
+      console.error(`❌ ${mode === "login" ? "Login" : "Register"} error:`, error);
       toast.error(error.message);
     } finally {
       setIsSubmitting(false);
@@ -100,80 +126,92 @@ export default function AuthForm({ mode = "login" }) {
   };
 
   return (
-    <motion.div
+    <motion.main
       variants={containerVariants}
       initial="initial"
       animate="animate"
-      className="glass-panel w-full max-w-md p-10"
+      className="glass-panel w-full max-w-md p-6 sm:p-10"
+      role="main"
     >
       {/* Header */}
-      <motion.div variants={itemVariants} className="mb-8 text-center">
+      <motion.header variants={itemVariants} className="mb-6 text-center sm:mb-8">
         <motion.p
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring" }}
-          className="mb-2 text-sm font-semibold uppercase tracking-[0.4em] text-primary-400"
+          className="mb-2 text-xs font-semibold uppercase tracking-[0.4em] text-primary-400 sm:text-sm"
+          aria-label="ChatX brand"
         >
           ChatX
         </motion.p>
-        <h1 className="mb-2 text-3xl font-bold text-dark-text">{config.title}</h1>
-        <p className="text-sm text-dark-muted">{config.subtitle}</p>
-      </motion.div>
+        <h1 className="mb-2 text-2xl font-bold text-dark-text sm:text-3xl">{config.title}</h1>
+        <p className="text-sm text-dark-muted sm:text-base">{config.subtitle}</p>
+      </motion.header>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5" aria-label={`${config.action} form`}>
         {mode === "register" && (
           <motion.div variants={itemVariants}>
-            <label className="mb-2 block text-xs font-medium text-dark-muted">
+            <label htmlFor="username" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">
               Username
             </label>
             <motion.input
               whileFocus={{ scale: 1.02 }}
+              id="username"
               type="text"
               name="username"
               required
               value={form.username}
               onChange={handleChange}
-              className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20"
+              className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 sm:text-base"
               placeholder="johndoe"
+              aria-required="true"
             />
           </motion.div>
         )}
 
         <motion.div variants={itemVariants}>
-          <label className="mb-2 block text-xs font-medium text-dark-muted">Email</label>
+          <label htmlFor="email" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">Email</label>
           <motion.input
             whileFocus={{ scale: 1.02 }}
+            id="email"
             type="email"
             name="email"
             required
             value={form.email}
             onChange={handleChange}
-            className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20"
+            className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 sm:text-base"
             placeholder="you@company.com"
+            aria-required="true"
+            autoComplete="email"
           />
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <label className="mb-2 block text-xs font-medium text-dark-muted">Password</label>
+          <label htmlFor="password" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">Password</label>
           <div className="relative">
             <motion.input
               whileFocus={{ scale: 1.02 }}
+              id="password"
               type={showPassword ? "text" : "password"}
               name="password"
               required
               value={form.password}
               onChange={handleChange}
-              className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 pr-12 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20"
+              className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 pr-12 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 sm:text-base"
               placeholder="••••••••"
+              aria-required="true"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-muted transition-colors hover:text-dark-text"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-dark-muted transition-colors hover:bg-white/10 hover:text-dark-text focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
             >
               {showPassword ? (
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -182,7 +220,7 @@ export default function AuthForm({ mode = "login" }) {
                   />
                 </svg>
               ) : (
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -203,16 +241,17 @@ export default function AuthForm({ mode = "login" }) {
 
         {mode === "register" && (
           <motion.div variants={itemVariants}>
-            <label className="mb-2 block text-xs font-medium text-dark-muted">
+            <label htmlFor="avatar" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">
               Avatar URL <span className="text-dark-muted/60">(optional)</span>
             </label>
             <motion.input
               whileFocus={{ scale: 1.02 }}
+              id="avatar"
               type="url"
               name="avatar"
               value={form.avatar}
               onChange={handleChange}
-              className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20"
+              className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 sm:text-base"
               placeholder="https://gravatar.com/avatar.png"
             />
           </motion.div>
@@ -224,14 +263,17 @@ export default function AuthForm({ mode = "login" }) {
           disabled={isSubmitting}
           whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
           whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
-          className="mt-6 w-full rounded-2xl bg-gradient-primary px-6 py-4 text-sm font-semibold uppercase tracking-wider text-white shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-glow-primary"
+          className="mt-6 w-full rounded-2xl bg-gradient-primary px-6 py-4 text-sm font-semibold uppercase tracking-wider text-white shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-glow-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg sm:text-base"
+          aria-label={isSubmitting ? "Submitting form" : config.action}
+          aria-disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <span className="flex items-center justify-center gap-2">
+            <span className="flex items-center justify-center gap-2" aria-live="polite">
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full"
+                aria-hidden="true"
               />
               Please wait...
             </span>
@@ -244,16 +286,16 @@ export default function AuthForm({ mode = "login" }) {
       {/* Footer */}
       <motion.p
         variants={itemVariants}
-        className="mt-6 text-center text-sm text-dark-muted"
+        className="mt-6 text-center text-sm text-dark-muted sm:text-base"
       >
         {config.alternate.text}{" "}
         <a
           href={config.alternate.href}
-          className="font-semibold text-primary-400 transition-colors hover:text-primary-300"
+          className="font-semibold text-primary-400 transition-colors hover:text-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg rounded"
         >
           {config.alternate.cta}
         </a>
       </motion.p>
-    </motion.div>
+    </motion.main>
   );
 }

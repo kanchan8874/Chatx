@@ -19,6 +19,26 @@ const MessageSchema = new Schema(
       required: true,
       trim: true,
     },
+    attachments: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        filename: {
+          type: String,
+          required: true,
+        },
+        fileType: {
+          type: String,
+          enum: ["image", "document", "other"],
+          default: "other",
+        },
+        fileSize: {
+          type: Number,
+        },
+      },
+    ],
     readBy: [
       {
         type: Schema.Types.ObjectId,

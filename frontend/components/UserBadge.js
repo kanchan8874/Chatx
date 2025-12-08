@@ -36,13 +36,16 @@ export default function UserBadge({ user, isOnline = false, size = "md", showSta
           {user?.avatar ? (
             <Image
               src={user.avatar}
-              alt={user.username || "User"}
+              alt={`${user.username || "User"}'s profile picture`}
               width={size === "sm" ? 32 : size === "md" ? 40 : size === "lg" ? 48 : 64}
               height={size === "sm" ? 32 : size === "md" ? 40 : size === "lg" ? 48 : 64}
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-primary text-xs font-semibold text-white">
+            <div 
+              className="flex h-full w-full items-center justify-center bg-gradient-primary text-xs font-semibold text-white"
+              aria-label={`${user?.username || "User"}'s avatar`}
+            >
               {(user?.username || "U")[0].toUpperCase()}
             </div>
           )}
