@@ -76,10 +76,10 @@ export function initSocketServer(server) {
     pingInterval: 25000,
   });
 
-  console.log(`🔌 Socket.io server initialized on ${SOCKET_ORIGIN}`);
+  console.log(` Socket.io server initialized on ${SOCKET_ORIGIN}`);
 
   io.on("connection", async (socket) => {
-    console.log(`🔌 New socket connection: ${socket.id}`);
+    console.log(` New socket connection: ${socket.id}`);
     
     const currentUserId = await resolveUserId(socket);
     console.log(`   User ID: ${currentUserId || "Unauthenticated"}`);
@@ -87,15 +87,15 @@ export function initSocketServer(server) {
     if (currentUserId) {
       onlineUsers.set(currentUserId, socket.id);
       broadcastOnlineUsers();
-      console.log(`✅ User ${currentUserId} is now online`);
+      console.log(` User ${currentUserId} is now online`);
     } else {
-      console.log("⚠️ Unauthenticated socket connection");
+      console.log(" Unauthenticated socket connection");
     }
 
     registerRoomEvents(socket, currentUserId);
 
     socket.on("disconnect", (reason) => {
-      console.log(`🔌 Socket disconnected: ${socket.id}, reason: ${reason}`);
+      console.log(` Socket disconnected: ${socket.id}, reason: ${reason}`);
       if (currentUserId) {
         onlineUsers.delete(currentUserId);
         broadcastOnlineUsers();

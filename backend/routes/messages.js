@@ -20,7 +20,7 @@ router.post("/", async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      console.log("❌ Unauthorized: No user found in request");
+      console.log(" Unauthorized: No user found in request");
       console.log("   Cookies:", req.cookies);
       console.log("   Cookie header:", req.headers.cookie);
       console.log("   Authorization:", req.headers.authorization);
