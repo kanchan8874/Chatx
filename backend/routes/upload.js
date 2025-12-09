@@ -47,7 +47,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "No file uploaded." });
     }
 
-    console.log("📤 Uploading file to Cloudinary:", {
+    console.log(" Uploading file to Cloudinary:", {
       originalName: req.file.originalname,
       mimetype: req.file.mimetype,
       size: req.file.size,
@@ -64,7 +64,7 @@ router.post("/", upload.single("file"), async (req, res) => {
     const isImage = req.file.mimetype.startsWith("image/");
     const fileType = isImage ? "image" : "document";
 
-    console.log("✅ File uploaded successfully:", {
+    console.log(" File uploaded successfully:", {
       url: cloudinaryResult.url,
       publicId: cloudinaryResult.public_id,
     });
@@ -78,7 +78,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       publicId: cloudinaryResult.public_id, // Store for potential deletion
     });
   } catch (error) {
-    console.error("❌ File upload error:", error);
+    console.error(" File upload error:", error);
     
     if (error instanceof multer.MulterError) {
       if (error.code === "LIMIT_FILE_SIZE") {

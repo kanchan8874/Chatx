@@ -37,14 +37,14 @@ function registerRoomEvents(socket, currentUserId) {
     if (chatId) {
       const chatIdStr = chatId.toString();
       socket.join(chatIdStr);
-      console.log(`   ✅ User ${currentUserId} joined chat room: ${chatIdStr}`);
+      console.log(`    User ${currentUserId} joined chat room: ${chatIdStr}`);
       
       // Verify room membership
       const room = io.sockets.adapter.rooms.get(chatIdStr);
       const roomSize = room ? room.size : 0;
-      console.log(`   👥 Room ${chatIdStr} now has ${roomSize} user(s)`);
+      console.log(`    Room ${chatIdStr} now has ${roomSize} user(s)`);
     } else {
-      console.log(`   ⚠️ Invalid chatId received for join: ${chatId}`);
+      console.log(`    Invalid chatId received for join: ${chatId}`);
     }
   });
 
@@ -52,14 +52,14 @@ function registerRoomEvents(socket, currentUserId) {
     if (chatId) {
       const chatIdStr = chatId.toString();
       socket.leave(chatIdStr);
-      console.log(`   ✅ User ${currentUserId} left chat room: ${chatIdStr}`);
+      console.log(`    User ${currentUserId} left chat room: ${chatIdStr}`);
       
       // Verify room membership after leave
       const room = io.sockets.adapter.rooms.get(chatIdStr);
       const roomSize = room ? room.size : 0;
-      console.log(`   👥 Room ${chatIdStr} now has ${roomSize} user(s)`);
+      console.log(`    Room ${chatIdStr} now has ${roomSize} user(s)`);
     } else {
-      console.log(`   ⚠️ Invalid chatId received for leave: ${chatId}`);
+      console.log(`    Invalid chatId received for leave: ${chatId}`);
     }
   });
 
@@ -108,15 +108,15 @@ export function initSocketServer(server) {
     if (currentUserId) {
       onlineUsers.set(currentUserId, socket.id);
       broadcastOnlineUsers();
-      console.log(`✅ User ${currentUserId} is now online`);
+      console.log(` User ${currentUserId} is now online`);
     } else {
-      console.log("⚠️ Unauthenticated socket connection");
+      console.log(" Unauthenticated socket connection");
     }
 
     registerRoomEvents(socket, currentUserId);
 
     socket.on("disconnect", (reason) => {
-      console.log(`🔌 Socket disconnected: ${socket.id}, reason: ${reason}`);
+      console.log(` Socket disconnected: ${socket.id}, reason: ${reason}`);
       if (currentUserId) {
         onlineUsers.delete(currentUserId);
         broadcastOnlineUsers();
@@ -137,7 +137,7 @@ export function getIO() {
 
 export function emitNewMessage(message) {
   if (!io) {
-    console.log("⚠️ Socket.io not initialized, cannot emit message");
+    console.log(" Socket.io not initialized, cannot emit message");
     return;
   }
 
@@ -146,7 +146,7 @@ export function emitNewMessage(message) {
     chatId: (message.chatId || message.chat)?.toString(),
   };
 
-  console.log("📤 Emitting message via socket:");
+  console.log(" Emitting message via socket:");
   console.log("   Chat ID:", safeMessage.chatId);
   console.log("   Message ID:", safeMessage.id);
   console.log("   Text:", safeMessage.text?.substring(0, 50));
@@ -154,15 +154,15 @@ export function emitNewMessage(message) {
   // Get all sockets in the room to verify
   const room = io.sockets.adapter.rooms.get(safeMessage.chatId);
   const roomSize = room ? room.size : 0;
-  console.log(`   👥 Users in room ${safeMessage.chatId}: ${roomSize}`);
+  console.log(`    Users in room ${safeMessage.chatId}: ${roomSize}`);
   
   if (roomSize === 0) {
-    console.log("   ⚠️ WARNING: No users in room! Message might not be delivered.");
+    console.log("    WARNING: No users in room! Message might not be delivered.");
   }
   
   // Emit to all users in the chat room
   io.to(safeMessage.chatId).emit("chat:message", safeMessage);
-  console.log(`   ✅ Emitted 'chat:message' to room: ${safeMessage.chatId}`);
+  console.log(`   Emitted 'chat:message' to room: ${safeMessage.chatId}`);
   
   // Also emit a refresh event for sidebar updates (broadcast to all)
   io.emit("chat:refresh", {
@@ -170,7 +170,7 @@ export function emitNewMessage(message) {
     preview: safeMessage.text,
     message: safeMessage,
   });
-  console.log(`   ✅ Emitted 'chat:refresh' to all clients`);
+  console.log(`    Emitted 'chat:refresh' to all clients`);
 }
 
 

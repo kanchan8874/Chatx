@@ -231,10 +231,10 @@ export async function createMessage({ chatId, senderId, text, attachments = [] }
   // Explicitly set chatId to ensure it's always present
   if (formattedMessage && !formattedMessage.chatId) {
     formattedMessage.chatId = normalizedChatId;
-    console.log("⚠️ Fixed missing chatId in formatted message:", normalizedChatId);
+    console.log(" Fixed missing chatId in formatted message:", normalizedChatId);
   }
   
-  console.log("📝 Created message with chatId:", formattedMessage?.chatId);
+  console.log("Created message with chatId:", formattedMessage?.chatId);
   
   return formattedMessage;
 }

@@ -89,7 +89,7 @@ export function attachAuthCookie(response, userId) {
   const token = signJwt({ sub: userId });
   const cookieOptions = { ...baseCookieOptions };
   
-  console.log(`🍪 Setting cookie: ${AUTH_COOKIE_NAME}`);
+  console.log(` Setting cookie: ${AUTH_COOKIE_NAME}`);
   console.log(`   Options:`, {
     httpOnly: cookieOptions.httpOnly,
     sameSite: cookieOptions.sameSite,

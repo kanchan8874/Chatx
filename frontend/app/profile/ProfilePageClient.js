@@ -262,7 +262,7 @@ export default function ProfilePageClient({ initialUser }) {
   };
 
   return (
-    <div className="relative flex h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-background-dark via-background-dark to-primary-900/20 p-2 sm:p-4 md:p-6">
+    <div className="relative flex min-h-screen items-start justify-center overflow-y-auto bg-gradient-to-br from-background-dark via-background-dark to-primary-900/20 p-2 sm:p-4 md:p-6 lg:p-8">
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -left-40 h-80 w-70 rounded-full bg-primary-500/20 blur-3xl animate-pulse-slow" />
@@ -277,7 +277,7 @@ export default function ProfilePageClient({ initialUser }) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative w-full max-w-xl z-10 h-full flex flex-col"
+        className="relative w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl z-10 flex flex-col py-4 my-4 lg:my-8"
       >
         {/* Header */}
         <motion.div 
@@ -313,7 +313,7 @@ export default function ProfilePageClient({ initialUser }) {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-7 shadow-2xl border border-white/10 backdrop-blur-2xl relative overflow-hidden flex-1 flex flex-col max-h-[75vh]"
+          className="glass-panel rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-7 lg:p-8 shadow-2xl border border-white/10 backdrop-blur-2xl relative overflow-hidden flex-1 flex flex-col min-h-0 max-h-full"
         >
           {/* Decorative Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-purple-500/5 pointer-events-none" />

@@ -20,7 +20,7 @@ router.post("/", async (req, res) => {
   try {
     const user = await getUserFromRequest(req);
     if (!user) {
-      console.log("❌ Unauthorized: No user found in request");
+      console.log(" Unauthorized: No user found in request");
       console.log("   Cookies:", req.cookies);
       console.log("   Cookie header:", req.headers.cookie);
       console.log("   Authorization:", req.headers.authorization);
@@ -37,7 +37,7 @@ router.post("/", async (req, res) => {
       return res.status(404).json({ error: "Chat not found." });
     }
 
-    console.log("📤 Creating message with attachments:", {
+    console.log(" Creating message with attachments:", {
       chatId,
       textLength: text?.trim().length || 0,
       attachmentsCount: attachments?.length || 0,

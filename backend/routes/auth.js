@@ -37,7 +37,7 @@ router.post("/register", async (req, res) => {
     try {
     await connectDB();
     } catch (dbError) {
-      console.error("❌ Database connection failed during registration:", dbError.message);
+      console.error(" Database connection failed during registration:", dbError.message);
       return res.status(500).json({ 
         error: "Database connection failed. Please check your MongoDB configuration." 
       });
@@ -46,14 +46,14 @@ router.post("/register", async (req, res) => {
     const normalizedEmail = emailValidation.normalized;
     const trimmedUsername = usernameValidation.normalized;
     
-    console.log(`🔍 Checking for existing user: email=${normalizedEmail}, username=${trimmedUsername}`);
-    console.log(`📊 Current database: ${mongoose.connection.name}`);
-    console.log(`📊 Current collection: ${User.collection.name}`);
+    console.log(` Checking for existing user: email=${normalizedEmail}, username=${trimmedUsername}`);
+    console.log(` Current database: ${mongoose.connection.name}`);
+    console.log(` Current collection: ${User.collection.name}`);
     
     // Check by email
     const existingByEmail = await User.findOne({ email: normalizedEmail });
     if (existingByEmail) {
-      console.log(`⚠️ User with email already exists:`);
+      console.log(` User with email already exists:`);
       console.log(`   - ID: ${existingByEmail._id}`);
       console.log(`   - Email: ${existingByEmail.email}`);
       console.log(`   - Username: ${existingByEmail.username}`);
@@ -80,13 +80,13 @@ router.post("/register", async (req, res) => {
     
     // Count total users for debugging
     const totalUsers = await User.countDocuments();
-    console.log(`📊 Total users in database: ${totalUsers}`);
+    console.log(` Total users in database: ${totalUsers}`);
     
-    console.log(`✅ No existing user found. Proceeding with registration...`);
+    console.log(` No existing user found. Proceeding with registration...`);
 
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    console.log(`📝 Creating new user in database...`);
+    console.log(` Creating new user in database...`);
     const user = await User.create({
       username: trimmedUsername,
       email: normalizedEmail,
@@ -94,7 +94,7 @@ router.post("/register", async (req, res) => {
       avatar: avatar || "",
     });
 
-    console.log(`✅ User registered successfully!`);
+    console.log(` User registered successfully!`);
     console.log(`   - ID: ${user._id}`);
     console.log(`   - Username: ${user.username}`);
     console.log(`   - Email: ${user.email}`);
@@ -104,7 +104,7 @@ router.post("/register", async (req, res) => {
     attachAuthCookie(res, user._id.toString());
     return res.status(201).json({ user: sanitizeUser(user) });
   } catch (error) {
-    console.error("❌ Register error:", error);
+    console.error(" Register error:", error);
     
     // Provide more specific error messages
     if (error.name === "MongoServerError" && error.code === 11000) {
@@ -127,46 +127,46 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body || {};
     
-    console.log(`🔐 Login attempt: email=${email}`);
+    console.log(` Login attempt: email=${email}`);
     
     // Validate email format
     const emailValidation = validateEmail(email);
     if (!emailValidation.isValid) {
-      console.log("❌ Invalid email format");
+      console.log(" Invalid email format");
       return res.status(400).json({ error: emailValidation.error });
     }
     
     if (!password || password.trim() === "") {
-      console.log("❌ Missing password");
+      console.log(" Missing password");
       return res.status(400).json({ error: "Password is required." });
     }
 
     await connectDB();
     const normalizedEmail = emailValidation.normalized;
-    console.log(`🔍 Searching for user with email: ${normalizedEmail}`);
+    console.log(` Searching for user with email: ${normalizedEmail}`);
     
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
-      console.log(`❌ User not found: ${normalizedEmail}`);
+      console.log(` User not found: ${normalizedEmail}`);
       return res.status(401).json({ error: "Invalid credentials." });
     }
 
-    console.log(`✅ User found: ${user.username} (${user.email})`);
-    console.log(`🔑 Verifying password...`);
+    console.log(` User found: ${user.username} (${user.email})`);
+    console.log(` Verifying password...`);
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
-      console.log(`❌ Invalid password for user: ${normalizedEmail}`);
+      console.log(` Invalid password for user: ${normalizedEmail}`);
       return res.status(401).json({ error: "Invalid credentials." });
     }
 
-    console.log(`✅ Password verified. Setting auth cookie...`);
+    console.log(` Password verified. Setting auth cookie...`);
     attachAuthCookie(res, user._id.toString());
-    console.log(`✅ Login successful for: ${user.username} (${user.email})`);
+    console.log(`Login successful for: ${user.username} (${user.email})`);
     
     return res.json({ user: sanitizeUser(user) });
   } catch (error) {
-    console.error("❌ Login error", error);
+    console.error(" Login error", error);
     return res.status(500).json({ error: "Unable to log in." });
   }
 });
