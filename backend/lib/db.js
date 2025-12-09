@@ -12,10 +12,15 @@ if (!process.env.MONGODB_URI) {
   dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 }
 
+// MongoDB URI - must be set in production (MongoDB Atlas)
+// Only fallback to localhost for local development
 const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/chatx";
+  process.env.MONGODB_URI || (process.env.NODE_ENV === "production" ? null : "mongodb://127.0.0.1:27017/chatx");
 
 if (!MONGODB_URI) {
+  console.error(" ERROR: MONGODB_URI is not defined!");
+  console.error(" For Render deployment, you must set MONGODB_URI in environment variables.");
+  console.error(" Use MongoDB Atlas connection string (mongodb+srv://...)");
   throw new Error("MONGODB_URI is not defined in your environment variables.");
 }
 

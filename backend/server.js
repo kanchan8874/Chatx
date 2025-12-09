@@ -25,15 +25,32 @@ if (!process.env.MONGODB_URI) {
 const app = express();
 // Render uses process.env.PORT, fallback to BACKEND_PORT for local development
 const PORT = process.env.PORT || process.env.BACKEND_PORT || 4000;
+// For Render: Use CLIENT_URL env var, fallback to NEXT_PUBLIC_APP_URL, then localhost for dev
 const CLIENT_URL = process.env.CLIENT_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 // Log for debugging deployment
 console.log(" CORS configured for:", CLIENT_URL);
 console.log(" Server starting on port:", PORT);
+console.log(" Environment:", process.env.NODE_ENV || "development");
+
+// CORS configuration - allow multiple origins
+const allowedOrigins = CLIENT_URL.includes(",")
+  ? CLIENT_URL.split(",").map(origin => origin.trim())
+  : [CLIENT_URL, "http://localhost:3000"]; // Always allow localhost for local dev
 
 app.use(
   cors({
-    origin: CLIENT_URL,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin) || origin.includes("localhost")) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );

@@ -5,17 +5,18 @@ import User from "../models/User.js";
 export const AUTH_COOKIE_NAME = "chatx_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-// Cookie options for development (localhost)
-// Note: localhost:3000 and localhost:4000 are considered same-site by browsers
-// So we can use sameSite: "lax" which works for same-site requests
+// Cookie options - different for production (HTTPS) vs development (HTTP)
+// For Render/production: secure=true, sameSite=none (cross-origin)
+// For localhost: secure=false, sameSite=lax (same-site)
+const isProduction = process.env.NODE_ENV === "production" || process.env.CLIENT_URL?.includes("https://");
 const baseCookieOptions = {
-    httpOnly: true,
-  sameSite: "lax", // "lax" works for same-site (localhost is same-site regardless of port)
-  secure: false, // false for localhost HTTP
-    path: "/",
-    maxAge: COOKIE_MAX_AGE,
-  // Don't set domain - allows cookie to work across localhost ports
-  };
+  httpOnly: true,
+  sameSite: isProduction ? "none" : "lax", // "none" for cross-origin HTTPS, "lax" for same-site
+  secure: isProduction, // true for HTTPS (production), false for HTTP (localhost)
+  path: "/",
+  maxAge: COOKIE_MAX_AGE,
+  // Don't set domain - allows cookie to work across different origins
+};
 
 export function sanitizeUser(userDoc) {
   if (!userDoc) {

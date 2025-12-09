@@ -4,10 +4,12 @@ import jwt from "jsonwebtoken";
 let io;
 const onlineUsers = new Map();
 const JWT_SECRET = process.env.JWT_SECRET || "local_dev_secret";
+// For Render: Use CLIENT_URL env var, fallback to NEXT_PUBLIC_APP_URL, then localhost for dev
 const SOCKET_ORIGIN = process.env.CLIENT_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 // Log for debugging deployment
 console.log("🔌 Socket.io CORS configured for:", SOCKET_ORIGIN);
+console.log("🔌 Environment:", process.env.NODE_ENV || "development");
 
 async function resolveUserId(socket) {
   const { token, userId } = socket.handshake.auth || {};
@@ -85,9 +87,24 @@ export function initSocketServer(server) {
     return io;
   }
 
+  // Allow multiple origins for CORS (production + localhost for dev)
+  const allowedOrigins = SOCKET_ORIGIN.includes(",") 
+    ? SOCKET_ORIGIN.split(",").map(origin => origin.trim())
+    : [SOCKET_ORIGIN, "http://localhost:3000"]; // Always allow localhost for local dev
+
   io = new Server(server, {
     cors: {
-      origin: SOCKET_ORIGIN,
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Check if origin is in allowed list
+        if (allowedOrigins.includes(origin) || origin.includes("localhost")) {
+          callback(null, true);
+        } else {
+          callback(new Error("Not allowed by CORS"));
+        }
+      },
       credentials: true,
       methods: ["GET", "POST"],
     },
@@ -97,7 +114,8 @@ export function initSocketServer(server) {
     pingInterval: 25000,
   });
 
-  console.log(`🔌 Socket.io server initialized on ${SOCKET_ORIGIN}`);
+  console.log(`🔌 Socket.io server initialized`);
+  console.log(`🔌 Allowed origins:`, allowedOrigins);
 
   io.on("connection", async (socket) => {
     console.log(`🔌 New socket connection: ${socket.id}`);

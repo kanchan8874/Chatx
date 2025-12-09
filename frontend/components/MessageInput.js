@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import EmojiPicker from "./EmojiPicker";
+import { getBrowserApiBase } from "../lib/api-client";
 
 /**
  * Premium message input component
@@ -129,13 +130,8 @@ export default function MessageInput({
     formData.append("file", file);
 
     try {
-      // Use environment variable for API URL, fallback to localhost for development
-      const apiBase = 
-        process.env.NEXT_PUBLIC_API_URL ||
-        process.env.API_BASE_URL ||
-        (typeof window !== "undefined" 
-          ? window.location.origin.replace(":3000", ":4000")
-          : "http://localhost:4000");
+      // Use getBrowserApiBase for consistent API URL handling
+      const apiBase = getBrowserApiBase();
 
       const xhr = new XMLHttpRequest();
 
