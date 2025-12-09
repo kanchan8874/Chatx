@@ -39,6 +39,7 @@ export default function AuthForm({ mode = "login", onModeChange }) {
   const router = useRouter();
   const config = modes[mode];
   const fileInputRef = useRef(null);
+  const isNavigatingRef = useRef(false); // Prevent multiple navigations
   const [form, setForm] = useState({
     username: "",
     email: "",
@@ -243,16 +244,22 @@ export default function AuthForm({ mode = "login", onModeChange }) {
 
       console.log(`✅ ${mode === "login" ? "Login" : "Register"} successful:`, data.user?.email);
 
+      // Prevent multiple navigations
+      if (isNavigatingRef.current) {
+        return;
+      }
+      isNavigatingRef.current = true;
+
       toast.success(
         mode === "login" ? "Welcome back to ChatX!" : "Account created successfully!",
       );
       
-      // Wait for cookie to be set in browser
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Wait for cookie to be set in browser (increased delay for Render)
+      await new Promise((resolve) => setTimeout(resolve, 500));
       
-      // Use window.location for full page reload to ensure server-side can read cookie
-      // This ensures cookie is properly available for server-side rendering
-      window.location.href = "/chat";
+      // Use router.replace for smooth navigation without adding to history
+      // This prevents page refresh and provides seamless transition
+      router.replace("/chat");
     } catch (error) {
       console.error(`❌ ${mode === "login" ? "Login" : "Register"} error:`, error);
       toast.error(error.message);
