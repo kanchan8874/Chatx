@@ -60,6 +60,7 @@ export default function SearchBox({ onSearch, placeholder = "Search chats...", c
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           className="flex-1 bg-transparent text-sm text-dark-text placeholder-dark-muted outline-none focus:ring-0 sm:text-base"
+          style={{ fontSize: '15px' }}
           aria-label={placeholder || "Search"}
         />
 

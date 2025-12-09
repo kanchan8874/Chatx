@@ -10,6 +10,17 @@ const nextConfig = {
   // Fix for monorepo: Set the root directory for file tracing
   // This tells Next.js where the root of the workspace is
   outputFileTracingRoot: path.join(__dirname),
+  
+  // Configure image domains for Next.js Image component
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

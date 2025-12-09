@@ -129,9 +129,13 @@ export default function MessageInput({
     formData.append("file", file);
 
     try {
-      const apiBase = typeof window !== "undefined" 
-        ? (window.location.origin.replace(":3000", ":4000") || "http://localhost:4000")
-        : "http://localhost:4000";
+      // Use environment variable for API URL, fallback to localhost for development
+      const apiBase = 
+        process.env.NEXT_PUBLIC_API_URL ||
+        process.env.API_BASE_URL ||
+        (typeof window !== "undefined" 
+          ? window.location.origin.replace(":3000", ":4000")
+          : "http://localhost:4000");
 
       const xhr = new XMLHttpRequest();
 
@@ -220,17 +224,17 @@ export default function MessageInput({
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       onSubmit={handleSubmit}
-      className="glass-panel border-t border-white/10 px-3 py-3 sm:px-6 sm:py-4"
+      className="glass-panel border-t border-white/10 px-2 py-3 sm:px-3 sm:py-3 md:px-4 md:py-4"
       aria-label="Message input form"
     >
-      <div className="flex items-end gap-2 sm:gap-3">
+      <div className="flex items-end gap-1.5 sm:gap-2 md:gap-3">
         {/* Emoji Button */}
         <motion.button
           type="button"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className={`glass-strong flex-shrink-0 rounded-xl p-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg ${
+          className={`glass-strong flex-shrink-0 rounded-lg sm:rounded-xl p-2 sm:p-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg touch-manipulation ${
             showEmojiPicker
               ? "bg-primary-500/20 text-primary-400"
               : "text-dark-muted hover:bg-white/10 hover:text-dark-text"
@@ -239,7 +243,7 @@ export default function MessageInput({
           title="Add emoji"
           aria-pressed={showEmojiPicker}
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -255,7 +259,7 @@ export default function MessageInput({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => fileInputRef.current?.click()}
-          className={`glass-strong flex-shrink-0 rounded-xl p-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg ${
+          className={`glass-strong flex-shrink-0 rounded-lg sm:rounded-xl p-2 sm:p-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg touch-manipulation ${
             selectedFiles.length > 0
               ? "bg-primary-500/20 text-primary-400"
               : "text-dark-muted hover:bg-white/10 hover:text-dark-text"
@@ -263,7 +267,7 @@ export default function MessageInput({
           aria-label="Attach file"
           title="Attach file"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -285,7 +289,7 @@ export default function MessageInput({
         />
 
         {/* Input Area */}
-        <div className="glass-strong relative flex-1 rounded-2xl px-3 py-2 sm:px-4 sm:py-3">
+        <div className="glass-strong relative flex-1 rounded-xl sm:rounded-2xl px-2 py-1.5 sm:px-3 sm:py-2 md:px-4 md:py-3">
           <label htmlFor="message-input" className="sr-only">
             Type your message
           </label>
@@ -298,7 +302,8 @@ export default function MessageInput({
             placeholder="Type a message..."
             rows={1}
             disabled={disabled}
-            className="max-h-32 w-full resize-none bg-transparent text-sm text-dark-text placeholder-dark-muted outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-transparent sm:text-base"
+            className="max-h-32 w-full resize-none bg-transparent text-base sm:text-base md:text-base text-dark-text placeholder-dark-muted outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-transparent"
+            style={{ fontSize: '16px', lineHeight: '1.5' }}
             aria-label="Message input"
             aria-describedby="message-hint"
           />
@@ -313,7 +318,7 @@ export default function MessageInput({
           disabled={disabled || (!message.trim() && selectedFiles.length === 0)}
           whileHover={{ scale: disabled || (!message.trim() && selectedFiles.length === 0) ? 1 : 1.05 }}
           whileTap={{ scale: disabled || (!message.trim() && selectedFiles.length === 0) ? 1 : 0.95 }}
-          className={`flex-shrink-0 rounded-xl px-4 py-3 text-sm font-semibold uppercase tracking-wider text-white shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg sm:px-6 ${
+          className={`flex-shrink-0 rounded-lg sm:rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-semibold uppercase tracking-wider text-white shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg touch-manipulation md:px-6 ${
             disabled || (!message.trim() && selectedFiles.length === 0)
               ? "cursor-not-allowed bg-dark-surface opacity-50"
               : "bg-gradient-primary hover:shadow-glow-primary"
@@ -321,9 +326,9 @@ export default function MessageInput({
           aria-label="Send message"
           aria-disabled={disabled || (!message.trim() && selectedFiles.length === 0)}
         >
-          <span className="flex items-center gap-2">
-            <span className="sr-only sm:not-sr-only">Send</span>
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <span className="flex items-center gap-1 sm:gap-2">
+            <span className="sr-only sm:inline">Send</span>
+            <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -337,15 +342,15 @@ export default function MessageInput({
 
       {/* Selected Files Preview */}
       {selectedFiles.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-2 sm:mt-3 flex flex-wrap gap-1.5 sm:gap-2">
           {selectedFiles.map((file, index) => (
             <motion.div
               key={`${file.name}-${index}`}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="glass-strong flex items-center gap-2 rounded-xl px-3 py-2 text-xs"
+              className="glass-strong flex items-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl px-2 py-1.5 sm:px-3 sm:py-2 text-[10px] sm:text-xs"
             >
-              <span className="truncate max-w-[120px] text-dark-text sm:max-w-[200px]">
+              <span className="truncate max-w-[80px] text-dark-text sm:max-w-[120px] md:max-w-[200px]">
                 {file.name}
               </span>
               {uploadProgress[file.name] && uploadProgress[file.name] < 100 && (

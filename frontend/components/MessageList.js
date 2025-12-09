@@ -60,11 +60,12 @@ export default function MessageList({
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto bg-gradient-to-b from-transparent via-dark-bg/50 to-transparent px-2 py-4 sm:px-4 sm:py-6 md:px-8"
+      className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-b from-transparent via-dark-bg/50 to-transparent px-2 py-3 sm:px-3 sm:py-4 md:px-4 md:py-6 scrollbar-hide"
       role="log"
       aria-label="Message list"
       aria-live="polite"
       aria-atomic="false"
+      style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {isLoading && (
         <div className="space-y-4">
@@ -78,14 +79,14 @@ export default function MessageList({
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="flex h-full items-center justify-center py-12"
+          className="flex h-full items-center justify-center py-8 sm:py-12"
           role="status"
           aria-live="polite"
         >
-          <div className="text-center">
-            <div className="mb-4 text-4xl sm:text-6xl" aria-hidden="true">💬</div>
-            <p className="text-base font-semibold text-dark-text sm:text-lg">No messages yet</p>
-            <p className="mt-2 text-sm text-dark-muted sm:text-base">Say hello to start the conversation 👋</p>
+          <div className="text-center px-4">
+            <div className="mb-3 text-3xl sm:text-4xl md:text-6xl" aria-hidden="true">💬</div>
+            <p className="text-sm font-semibold text-dark-text sm:text-base md:text-lg">No messages yet</p>
+            <p className="mt-2 text-xs text-dark-muted sm:text-sm md:text-base">Say hello to start the conversation 👋</p>
           </div>
         </motion.div>
       )}

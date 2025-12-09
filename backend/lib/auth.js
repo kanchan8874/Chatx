@@ -5,7 +5,9 @@ import User from "../models/User.js";
 export const AUTH_COOKIE_NAME = "chatx_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-
+// Cookie options for development (localhost)
+// Note: localhost:3000 and localhost:4000 are considered same-site by browsers
+// So we can use sameSite: "lax" which works for same-site requests
 const baseCookieOptions = {
     httpOnly: true,
   sameSite: "lax", // "lax" works for same-site (localhost is same-site regardless of port)
@@ -87,7 +89,7 @@ export function attachAuthCookie(response, userId) {
   const token = signJwt({ sub: userId });
   const cookieOptions = { ...baseCookieOptions };
   
-  console.log(` Setting cookie: ${AUTH_COOKIE_NAME}`);
+  console.log(`🍪 Setting cookie: ${AUTH_COOKIE_NAME}`);
   console.log(`   Options:`, {
     httpOnly: cookieOptions.httpOnly,
     sameSite: cookieOptions.sameSite,

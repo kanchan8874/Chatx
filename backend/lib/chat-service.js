@@ -22,13 +22,33 @@ function formatMessage(messageDoc) {
       ? formatMember(messageDoc.sender)
       : { id: messageDoc.sender?.toString() };
 
+  // Extract chatId - handle all possible formats
+  let chatId = null;
+  if (messageDoc.chat) {
+    if (typeof messageDoc.chat === "object" && messageDoc.chat._id) {
+      // Populated chat object
+      chatId = messageDoc.chat._id.toString();
+    } else if (typeof messageDoc.chat === "string") {
+      // String ObjectId
+      chatId = messageDoc.chat;
+    } else if (messageDoc.chat.toString) {
+      // ObjectId object
+      chatId = messageDoc.chat.toString();
+    }
+  }
+  
+  // Ensure chatId is always a string
+  if (!chatId) {
+    console.error("⚠️ Warning: Message has no chatId!", {
+      messageId: messageDoc._id?.toString(),
+      chat: messageDoc.chat,
+      chatType: typeof messageDoc.chat,
+    });
+  }
+
   return {
     id: messageDoc._id?.toString(),
-    chatId:
-      messageDoc.chat?._id?.toString() ||
-      (typeof messageDoc.chat === "string"
-        ? messageDoc.chat
-        : messageDoc.chat?.toString()),
+    chatId: chatId || messageDoc.chat?.toString() || null,
     text: messageDoc.text,
     sender,
     attachments: messageDoc.attachments || [],
@@ -180,22 +200,43 @@ export async function getMessagesForChat(chatId, options = {}) {
 }
 
 export async function createMessage({ chatId, senderId, text, attachments = [] }) {
+  // Ensure chatId is a string for consistency
+  const normalizedChatId = chatId?.toString();
+  
+  // Transform attachments to match Message schema
+  const formattedAttachments = (attachments || []).map((att) => ({
+    url: att.url,
+    filename: att.filename || att.fileName || att.url.split("/").pop(), // Support both filename and fileName
+    fileType: att.fileType || (att.url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? "image" : "document"),
+    fileSize: att.fileSize || 0,
+  }));
+  
   const message = await Message.create({
-    chat: chatId,
+    chat: normalizedChatId,
     sender: senderId,
     text: text || "",
-    attachments: attachments || [],
+    attachments: formattedAttachments,
     readBy: [senderId],
   });
 
   await message.populate("sender", "username email avatar");
 
-  await Chat.findByIdAndUpdate(chatId, {
+  await Chat.findByIdAndUpdate(normalizedChatId, {
     lastMessage: message._id,
     updatedAt: new Date(),
   });
 
-  return formatMessage(message);
+  const formattedMessage = formatMessage(message);
+  
+  // Explicitly set chatId to ensure it's always present
+  if (formattedMessage && !formattedMessage.chatId) {
+    formattedMessage.chatId = normalizedChatId;
+    console.log("⚠️ Fixed missing chatId in formatted message:", normalizedChatId);
+  }
+  
+  console.log("📝 Created message with chatId:", formattedMessage?.chatId);
+  
+  return formattedMessage;
 }
 
 export async function markMessagesRead(chatId, userId) {

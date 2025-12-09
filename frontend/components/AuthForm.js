@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import Image from "next/image";
 import { getBrowserApiBase } from "@/lib/api-client";
+import { validateEmail, validatePassword, validateUsername, formatText } from "@/lib/validation";
 
 const modes = {
   login: {
@@ -33,36 +35,187 @@ const modes = {
  * Premium auth form component with glassmorphism
  * Animated inputs and gradient borders
  */
-export default function AuthForm({ mode = "login" }) {
+export default function AuthForm({ mode = "login", onModeChange }) {
   const router = useRouter();
   const config = modes[mode];
+  const fileInputRef = useRef(null);
   const [form, setForm] = useState({
     username: "",
     email: "",
     password: "",
     avatar: "",
   });
+  const [errors, setErrors] = useState({
+    username: "",
+    email: "",
+    password: "",
+  });
+  const [touched, setTouched] = useState({
+    username: false,
+    email: false,
+    password: false,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+
+  // Real-time validation
+  const validateField = (name, value) => {
+    let validation;
+    
+    switch (name) {
+      case "username":
+        validation = validateUsername(value);
+        break;
+      case "email":
+        validation = validateEmail(value);
+        break;
+      case "password":
+        validation = validatePassword(value);
+        break;
+      default:
+        validation = { isValid: true, error: null };
+    }
+    
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validation.isValid ? "" : validation.error,
+    }));
+    
+    return validation.isValid;
+  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    
+    // Format text for username (capitalize first letter)
+    let formattedValue = value;
+    if (name === "username" && value.length > 0) {
+      formattedValue = formatText(value, { capitalizeFirst: false, trim: false });
+    }
+    
+    setForm((prev) => ({ ...prev, [name]: formattedValue }));
+    
+    // Real-time validation if field has been touched
+    if (touched[name]) {
+      validateField(name, formattedValue);
+    }
+  };
+
+  const handleBlur = (event) => {
+    const { name, value } = event.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    validateField(name, value);
+  };
+
+  const handleAvatarSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    toast.loading("Uploading avatar...", { id: "avatar-upload" });
+
+    try {
+      const apiBase = getBrowserApiBase();
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const xhr = new XMLHttpRequest();
+      
+      const uploadPromise = new Promise((resolve, reject) => {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch (e) {
+              reject(new Error("Invalid response from server"));
+            }
+          } else {
+            try {
+              const error = JSON.parse(xhr.responseText);
+              reject(new Error(error.error || "Upload failed"));
+            } catch (e) {
+              reject(new Error("Upload failed"));
+            }
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Upload failed"));
+
+        xhr.open("POST", `${apiBase}/api/upload`);
+        xhr.withCredentials = true;
+        xhr.send(formData);
+      });
+
+      const result = await uploadPromise;
+      
+      // Update form data with new avatar URL
+      const newAvatarUrl = result.url;
+      setForm((prev) => ({ ...prev, avatar: newAvatarUrl }));
+      setAvatarPreview(newAvatarUrl);
+      
+      toast.success("Avatar uploaded successfully!", { id: "avatar-upload" });
+    } catch (error) {
+      console.error("Avatar upload error:", error);
+      toast.error(error.message || "Failed to upload avatar", { id: "avatar-upload" });
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    
+    // Mark all fields as touched
+    const allTouched = {
+      username: mode === "register",
+      email: true,
+      password: true,
+    };
+    setTouched(allTouched);
+    
+    // Validate all fields
+    let isValid = true;
+    if (mode === "register") {
+      isValid = validateField("username", form.username) && isValid;
+    }
+    isValid = validateField("email", form.email) && isValid;
+    isValid = validateField("password", form.password) && isValid;
+    
+    if (!isValid) {
+      return;
+    }
+    
     setIsSubmitting(true);
     const apiBase = getBrowserApiBase();
     const endpoint =
       mode === "login" ? `${apiBase}/api/auth/login` : `${apiBase}/api/auth/register`;
 
     try {
-      // Validate form data
-      if (!form.email || !form.password) {
-        throw new Error("Email and password are required.");
-      }
-
       console.log(`🔐 ${mode === "login" ? "Login" : "Register"} attempt:`, {
         email: form.email,
         endpoint,
@@ -130,11 +283,11 @@ export default function AuthForm({ mode = "login" }) {
       variants={containerVariants}
       initial="initial"
       animate="animate"
-      className="glass-panel w-full max-w-md p-6 sm:p-10"
+      className="glass-panel w-full max-w-md rounded-r-3xl p-6 shadow-2xl sm:p-8 lg:rounded-l-none lg:h-full lg:flex lg:flex-col lg:justify-center"
       role="main"
     >
-      {/* Header */}
-      <motion.header variants={itemVariants} className="mb-6 text-center sm:mb-8">
+      {/* Header - Compact */}
+      <motion.header variants={itemVariants} className="mb-5 text-center">
         <motion.p
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -144,12 +297,12 @@ export default function AuthForm({ mode = "login" }) {
         >
           ChatX
         </motion.p>
-        <h1 className="mb-2 text-2xl font-bold text-dark-text sm:text-3xl">{config.title}</h1>
-        <p className="text-sm text-dark-muted sm:text-base">{config.subtitle}</p>
+        <h1 className="mb-1.5 text-2xl font-bold leading-tight text-dark-text sm:text-3xl">{config.title}</h1>
+        <p className="text-sm leading-relaxed text-dark-muted sm:text-base">{config.subtitle}</p>
       </motion.header>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5" aria-label={`${config.action} form`}>
+      {/* Form - Compact */}
+      <form onSubmit={handleSubmit} noValidate className="space-y-3.5 sm:space-y-4" aria-label={`${config.action} form`}>
         {mode === "register" && (
           <motion.div variants={itemVariants}>
             <label htmlFor="username" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">
@@ -160,47 +313,97 @@ export default function AuthForm({ mode = "login" }) {
               id="username"
               type="text"
               name="username"
-              required
               value={form.username}
               onChange={handleChange}
-              className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 sm:text-base"
+              onBlur={handleBlur}
+              className={`glass-strong w-full rounded-2xl border px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:ring-2 sm:text-base ${
+                touched.username && errors.username
+                  ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/20"
+                  : "border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20"
+              }`}
               placeholder="johndoe"
               aria-required="true"
+              aria-invalid={touched.username && errors.username ? "true" : "false"}
+              aria-describedby={touched.username && errors.username ? "username-error" : undefined}
             />
+            {touched.username && errors.username && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                id="username-error"
+                role="alert"
+                className="mt-1.5 flex items-center gap-1.5 text-xs text-red-400"
+              >
+                <svg className="h-3.5 w-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span>{errors.username}</span>
+              </motion.p>
+            )}
           </motion.div>
         )}
 
         <motion.div variants={itemVariants}>
-          <label htmlFor="email" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">Email</label>
+          <label htmlFor="email" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">
+            Email
+          </label>
           <motion.input
             whileFocus={{ scale: 1.02 }}
             id="email"
             type="email"
             name="email"
-            required
             value={form.email}
             onChange={handleChange}
-            className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 sm:text-base"
+            onBlur={handleBlur}
+            className={`glass-strong w-full rounded-2xl border px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:ring-2 sm:text-base ${
+              touched.email && errors.email
+                ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/20"
+                : "border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20"
+            }`}
             placeholder="you@company.com"
             aria-required="true"
+            aria-invalid={touched.email && errors.email ? "true" : "false"}
+            aria-describedby={touched.email && errors.email ? "email-error" : undefined}
             autoComplete="email"
           />
+          {touched.email && errors.email && (
+            <motion.p
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              id="email-error"
+              role="alert"
+              className="mt-1.5 flex items-center gap-1.5 text-xs text-red-400"
+            >
+              <svg className="h-3.5 w-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{errors.email}</span>
+            </motion.p>
+          )}
         </motion.div>
 
         <motion.div variants={itemVariants}>
-          <label htmlFor="password" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">Password</label>
+          <label htmlFor="password" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">
+            Password
+          </label>
           <div className="relative">
             <motion.input
               whileFocus={{ scale: 1.02 }}
               id="password"
               type={showPassword ? "text" : "password"}
               name="password"
-              required
               value={form.password}
               onChange={handleChange}
-              className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 pr-12 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 sm:text-base"
+              onBlur={handleBlur}
+              className={`glass-strong w-full rounded-2xl border px-4 py-3 pr-12 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:ring-2 sm:text-base ${
+                touched.password && errors.password
+                  ? "border-red-500/50 focus:border-red-500 focus:ring-red-500/20"
+                  : "border-white/10 focus:border-primary-500/50 focus:ring-primary-500/20"
+              }`}
               placeholder="••••••••"
               aria-required="true"
+              aria-invalid={touched.password && errors.password ? "true" : "false"}
+              aria-describedby={touched.password && errors.password ? "password-error" : undefined}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
             <button
@@ -237,23 +440,98 @@ export default function AuthForm({ mode = "login" }) {
               )}
             </button>
           </div>
+          {touched.password && errors.password && (
+            <motion.p
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              id="password-error"
+              role="alert"
+              className="mt-1.5 flex items-center gap-1.5 text-xs text-red-400"
+            >
+              <svg className="h-3.5 w-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{errors.password}</span>
+            </motion.p>
+          )}
         </motion.div>
 
         {mode === "register" && (
-          <motion.div variants={itemVariants}>
-            <label htmlFor="avatar" className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">
-              Avatar URL <span className="text-dark-muted/60">(optional)</span>
+          <motion.div variants={itemVariants} className="space-y-3">
+            <label className="mb-2 block text-xs font-medium text-dark-muted sm:text-sm">
+              Avatar <span className="text-dark-muted/60">(optional)</span>
             </label>
-            <motion.input
-              whileFocus={{ scale: 1.02 }}
-              id="avatar"
-              type="url"
-              name="avatar"
-              value={form.avatar}
-              onChange={handleChange}
-              className="glass-strong w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-dark-text placeholder-dark-muted outline-none transition-all focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20 sm:text-base"
-              placeholder="https://gravatar.com/avatar.png"
-            />
+            
+            {/* Avatar Preview */}
+            {avatarPreview && (
+              <div className="relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg">
+                    <Image
+                      src={avatarPreview}
+                      alt="Avatar preview"
+                      width={48}
+                      height={48}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-dark-text">Preview</p>
+                    <p className="text-xs text-dark-muted truncate">{avatarPreview}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAvatarPreview(null);
+                      setForm((prev) => ({ ...prev, avatar: "" }));
+                    }}
+                    className="flex-shrink-0 rounded-lg p-1.5 text-red-400 transition-colors hover:bg-red-500/20"
+                    aria-label="Remove avatar"
+                  >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Upload Button */}
+            <label
+              htmlFor="avatar-upload"
+              className={`glass-strong flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed px-3 py-2.5 text-xs transition-all ${
+                isUploadingAvatar
+                  ? "border-primary-400/50 bg-primary-400/10 cursor-wait"
+                  : "border-white/20 hover:border-primary-400/50 hover:bg-white/5"
+              }`}
+            >
+              {isUploadingAvatar ? (
+                <>
+                  <svg className="h-4 w-4 animate-spin text-primary-400" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className="text-xs text-dark-text">Uploading...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4 text-dark-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  <span className="text-xs text-dark-text">{avatarPreview ? "Change Avatar" : "Upload Image"}</span>
+                </>
+              )}
+              <input
+                id="avatar-upload"
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarSelect}
+                disabled={isUploadingAvatar}
+              />
+            </label>
+            <p className="text-xs text-dark-muted/70 text-center">Max 5MB, JPG/PNG/GIF</p>
           </motion.div>
         )}
 
@@ -263,7 +541,7 @@ export default function AuthForm({ mode = "login" }) {
           disabled={isSubmitting}
           whileHover={{ scale: isSubmitting ? 1 : 1.02 }}
           whileTap={{ scale: isSubmitting ? 1 : 0.98 }}
-          className="mt-6 w-full rounded-2xl bg-gradient-primary px-6 py-4 text-sm font-semibold uppercase tracking-wider text-white shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-glow-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg sm:text-base"
+          className="mt-5 w-full rounded-2xl bg-gradient-primary px-6 py-3.5 text-sm font-semibold uppercase tracking-wider text-white shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-50 hover:shadow-glow-primary hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg sm:text-base"
           aria-label={isSubmitting ? "Submitting form" : config.action}
           aria-disabled={isSubmitting}
         >
@@ -286,15 +564,20 @@ export default function AuthForm({ mode = "login" }) {
       {/* Footer */}
       <motion.p
         variants={itemVariants}
-        className="mt-6 text-center text-sm text-dark-muted sm:text-base"
+        className="mt-5 text-center text-sm text-dark-muted sm:text-base"
       >
         {config.alternate.text}{" "}
-        <a
-          href={config.alternate.href}
-          className="font-semibold text-primary-400 transition-colors hover:text-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg rounded"
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof onModeChange === "function") {
+              onModeChange(mode === "login" ? "register" : "login");
+            }
+          }}
+          className="font-semibold text-primary-400 transition-colors hover:text-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-bg rounded underline-offset-4 hover:underline"
         >
           {config.alternate.cta}
-        </a>
+        </button>
       </motion.p>
     </motion.main>
   );

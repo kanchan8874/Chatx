@@ -1,29 +1,16 @@
 import { Router } from "express";
 import multer from "multer";
 import path from "path";
-import { fileURLToPath } from "url";
 import { getUserFromRequest } from "../lib/auth.js";
 import { connectDB } from "../lib/db.js";
+import { uploadToCloudinary } from "../lib/cloudinary.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, "../../uploads");
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-  },
-});
+// Configure multer to use memory storage (we'll upload directly to Cloudinary)
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   // Allow images, PDFs, and common document types
-  const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|txt/;
+  const allowedTypes = /jpeg|jpg|png|gif|webp|pdf|doc|docx|txt/;
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = allowedTypes.test(file.mimetype);
 
@@ -60,29 +47,53 @@ router.post("/", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "No file uploaded." });
     }
 
-    // Determine file type
-    const imageTypes = /jpeg|jpg|png|gif|webp/;
-    const fileType = imageTypes.test(path.extname(req.file.filename).toLowerCase())
-      ? "image"
-      : "document";
+    console.log("📤 Uploading file to Cloudinary:", {
+      originalName: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+    });
 
-    // Return file URL (in production, use cloud storage URL)
-    const fileUrl = `/uploads/${req.file.filename}`;
-    const fullUrl = `${req.protocol}://${req.get("host")}${fileUrl}`;
+    // Upload to Cloudinary
+    const cloudinaryResult = await uploadToCloudinary(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
+
+    // Determine file type for response (matching Message schema enum)
+    const isImage = req.file.mimetype.startsWith("image/");
+    const fileType = isImage ? "image" : "document";
+
+    console.log("✅ File uploaded successfully:", {
+      url: cloudinaryResult.url,
+      publicId: cloudinaryResult.public_id,
+    });
 
     res.json({
-      url: fullUrl,
-      filename: req.file.originalname,
-      fileType,
-      fileSize: req.file.size,
+      url: cloudinaryResult.url,
+      fileName: req.file.originalname, // Frontend will use this
+      filename: req.file.originalname, // Backend schema expects this
+      fileType: fileType, // "image" or "document" (matching schema enum)
+      fileSize: cloudinaryResult.bytes || req.file.size,
+      publicId: cloudinaryResult.public_id, // Store for potential deletion
     });
   } catch (error) {
-    console.error("File upload error:", error);
+    console.error("❌ File upload error:", error);
+    
     if (error instanceof multer.MulterError) {
       if (error.code === "LIMIT_FILE_SIZE") {
         return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
       }
+      return res.status(400).json({ error: error.message });
     }
+    
+    // Check if it's a Cloudinary error
+    if (error.message && error.message.includes("Cloudinary")) {
+      return res.status(500).json({ 
+        error: "Failed to upload file to cloud storage. Please try again." 
+      });
+    }
+    
     res.status(500).json({ error: "Failed to upload file." });
   }
 });

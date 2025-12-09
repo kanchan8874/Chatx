@@ -21,8 +21,8 @@ if (!MONGODB_URI) {
 
 // Check if password placeholder exists
 if (MONGODB_URI.includes("<db_password>")) {
-  console.error(" ERROR: MongoDB URI contains <db_password> placeholder!");
-  console.error(" Please replace <db_password> with your actual MongoDB password in .env file");
+  console.error("❌ ERROR: MongoDB URI contains <db_password> placeholder!");
+  console.error("💡 Please replace <db_password> with your actual MongoDB password in .env file");
   throw new Error("MongoDB password not configured. Please update MONGODB_URI in .env file.");
 }
 
@@ -60,23 +60,23 @@ export async function connectDB() {
       }
     }
     
-    console.log(` Connecting to MongoDB with URI: ${connectionUri.replace(/:[^:@]+@/, ":****@")}`);
+    console.log(`🔗 Connecting to MongoDB with URI: ${connectionUri.replace(/:[^:@]+@/, ":****@")}`);
 
     cached.promise = mongoose
       .connect(connectionUri, opts)
       .then((mongooseInstance) => {
         const dbName = mongooseInstance.connection.name;
         const host = mongooseInstance.connection.host;
-        console.log(` Connected to MongoDB: ${dbName} on ${host}`);
+        console.log(`📦 Connected to MongoDB: ${dbName} on ${host}`);
         return mongooseInstance;
       })
       .catch((error) => {
         cached.promise = null;
-        console.error(" MongoDB connection error:", error.message);
+        console.error("❌ MongoDB connection error:", error.message);
         if (error.message.includes("authentication failed")) {
-          console.error(" Check your MongoDB username and password in .env file");
+          console.error("💡 Check your MongoDB username and password in .env file");
         } else if (error.message.includes("ENOTFOUND") || error.message.includes("getaddrinfo")) {
-          console.error(" Check your MongoDB cluster URL in .env file");
+          console.error("💡 Check your MongoDB cluster URL in .env file");
         }
         throw error;
       });

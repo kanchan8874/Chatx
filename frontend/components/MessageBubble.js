@@ -31,15 +31,15 @@ export default function MessageBubble({ message, isOwn = false, sender = null })
       initial="initial"
       animate="animate"
       variants={bubbleVariants}
-      className={`flex w-full ${isOwn ? "justify-end" : "justify-start"} mb-4 px-2 sm:px-4`}
+      className={`flex w-full ${isOwn ? "justify-end" : "justify-start"} mb-3 sm:mb-4 px-1 sm:px-2 md:px-4`}
       role="article"
       aria-label={isOwn ? "Your message" : `Message from ${sender?.username || "User"}`}
     >
-      <div className={`flex max-w-[75%] md:max-w-[60%] ${isOwn ? "flex-row-reverse" : "flex-row"} items-end gap-2`}>
+      <div className={`flex max-w-[85%] sm:max-w-[75%] md:max-w-[65%] lg:max-w-[60%] ${isOwn ? "flex-row-reverse" : "flex-row"} items-end gap-1.5 sm:gap-2`}>
         {/* Avatar - only show for received messages */}
         {!isOwn && sender && (
-          <div className="flex-shrink-0">
-            <div className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-primary-500/30 ring-2 ring-primary-500/20">
+          <div className="flex-shrink-0 hidden sm:block">
+            <div className="relative h-7 w-7 sm:h-8 sm:w-8 overflow-hidden rounded-full border-2 border-primary-500/30 ring-2 ring-primary-500/20">
               {sender.avatar ? (
                 <Image
                   src={sender.avatar}
@@ -64,76 +64,146 @@ export default function MessageBubble({ message, isOwn = false, sender = null })
         {/* Message Bubble */}
         <div className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
           {!isOwn && sender && (
-            <span className="mb-1 px-2 text-xs font-medium text-dark-muted">
+            <span className="mb-1 px-2 text-xs sm:text-sm font-medium text-dark-muted">
               {sender.username}
             </span>
           )}
           
           <div
-            className={`group relative rounded-2xl px-4 py-2.5 shadow-lg transition-all duration-200 ${
+            className={`group relative rounded-xl sm:rounded-2xl shadow-lg transition-all duration-200 ${
               isOwn
                 ? "bg-gradient-primary text-white rounded-br-md"
                 : "glass-strong text-dark-text rounded-bl-md border border-white/10"
+            } ${
+              message.attachments && message.attachments.length > 0 && !message.text
+                ? "p-0" // No padding if only attachments
+                : "px-3 py-2 sm:px-4 sm:py-2.5" // Responsive padding
             }`}
           >
             {/* Message Text */}
             {message.text && (
-              <p className={`text-sm leading-relaxed sm:text-base ${isOwn ? "text-white" : "text-dark-text"}`}>
+              <p className={`text-sm sm:text-base md:text-base leading-relaxed emoji-text ${
+                isOwn ? "text-white" : "text-dark-text"
+              } ${
+                message.attachments && message.attachments.length > 0 ? "mb-2" : ""
+              }`} style={{ fontSize: '16px', lineHeight: '1.6' }}>
                 {message.text}
               </p>
             )}
 
             {/* Attachments */}
             {message.attachments && message.attachments.length > 0 && (
-              <div className={`mt-2 space-y-2 ${message.text ? "" : ""}`}>
-                {message.attachments.map((attachment, idx) => (
-                  <div key={idx} className="rounded-lg overflow-hidden">
-                    {attachment.fileType === "image" ? (
+              <div className={`space-y-1.5 ${message.text ? "mt-2" : ""} ${
+                !message.text ? "p-0.5" : ""
+              }`}>
+                {message.attachments.map((attachment, idx) => {
+                  const isImage = attachment.fileType === "image" || 
+                                 attachment.fileType?.startsWith("image/") ||
+                                 attachment.url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                  
+                  return (
+                  <div key={idx} className="relative group/attachment">
+                    {isImage ? (
+                      // Image Attachment - Compact & Minimal
                       <a
                         href={attachment.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block"
+                        className="block relative rounded-lg overflow-hidden bg-black/10"
                       >
-                        <img
-                          src={attachment.url}
-                          alt={attachment.filename}
-                          className="max-w-full max-h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                          loading="lazy"
-                        />
+                        <div className="relative max-w-[280px] sm:max-w-[320px] w-full" style={{ maxHeight: '250px' }}>
+                          <img
+                            src={attachment.url}
+                            alt={attachment.filename || "Image"}
+                            className="w-full h-auto rounded-lg object-contain cursor-pointer"
+                            loading="lazy"
+                            style={{ maxHeight: '250px' }}
+                          />
+                          {/* Overlay on hover */}
+                          <div className="absolute inset-0 bg-black/0 hover:bg-black/15 transition-colors duration-200 rounded-lg flex items-center justify-center">
+                            <div className="opacity-0 group-hover/attachment:opacity-100 transition-opacity duration-200">
+                              <div className={`rounded-full p-2 ${
+                                isOwn ? "bg-white/20" : "bg-black/20"
+                              }`}>
+                                <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {/* Image caption/filename - minimal */}
+                        {attachment.filename && attachment.filename !== attachment.url.split("/").pop() && (
+                          <div className={`absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/60 via-black/40 to-transparent rounded-b-lg`}>
+                            <p className={`text-[10px] truncate text-white`}>
+                              {attachment.filename}
+                            </p>
+                          </div>
+                        )}
                       </a>
                     ) : (
+                      // File/Document Attachment - WhatsApp style
                       <a
                         href={attachment.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`flex items-center gap-2 rounded-lg p-2 border ${
+                        download={attachment.filename}
+                        className={`flex items-center gap-3 rounded-xl p-3.5 border transition-all duration-200 ${
                           isOwn
-                            ? "bg-white/10 border-white/20 text-white"
-                            : "bg-white/5 border-white/10 text-dark-text"
-                        } hover:bg-white/10 transition-colors`}
+                            ? "bg-white/10 border-white/20 text-white hover:bg-white/15"
+                            : "bg-white/5 border-white/10 text-dark-text hover:bg-white/10"
+                        }`}
                       >
-                        <svg className="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                          />
-                        </svg>
-                        <span className="text-xs truncate flex-1">{attachment.filename}</span>
-                        <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
+                        {/* File Icon */}
+                        <div className={`flex-shrink-0 rounded-lg p-2.5 ${
+                          isOwn 
+                            ? "bg-white/20" 
+                            : "bg-primary-500/20"
+                        }`}>
+                          {attachment.filename?.match(/\.(pdf)$/i) ? (
+                            <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                            </svg>
+                          ) : attachment.filename?.match(/\.(doc|docx)$/i) ? (
+                            <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                            </svg>
+                          ) : (
+                            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          )}
+                        </div>
+                        
+                        {/* File Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm sm:text-base font-medium truncate ${
+                            isOwn ? "text-white" : "text-dark-text"
+                          }`} style={{ fontSize: '14px' }}>
+                            {attachment.filename || "File"}
+                          </p>
+                          {attachment.fileSize && (
+                            <p className={`text-xs sm:text-sm mt-0.5 ${
+                              isOwn ? "text-white/70" : "text-dark-muted"
+                            }`} style={{ fontSize: '12px' }}>
+                              {(attachment.fileSize / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          )}
+                        </div>
+                        
+                        {/* Download Icon */}
+                        <div className="flex-shrink-0">
+                          <svg className={`h-5 w-5 ${
+                            isOwn ? "text-white/80" : "text-primary-400"
+                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                        </div>
                       </a>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -141,8 +211,9 @@ export default function MessageBubble({ message, isOwn = false, sender = null })
             <div className={`mt-1.5 flex items-center justify-end gap-1 ${isOwn ? "text-white/80" : "text-dark-muted"}`}>
               <time 
                 dateTime={message.createdAt}
-                className="text-[10px] font-medium sm:text-xs"
+                className="text-xs font-medium sm:text-xs"
                 aria-label={`Sent at ${dayjs(message.createdAt).format("h:mm A")}`}
+                style={{ fontSize: '11px' }}
               >
                 {dayjs(message.createdAt).format("HH:mm")}
               </time>
