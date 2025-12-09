@@ -29,29 +29,62 @@ const PORT = process.env.PORT || process.env.BACKEND_PORT || 4000;
 const CLIENT_URL = process.env.CLIENT_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 // Log for debugging deployment
-console.log(" CORS configured for:", CLIENT_URL);
-console.log(" Server starting on port:", PORT);
-console.log(" Environment:", process.env.NODE_ENV || "development");
+console.log(" =========================================");
+console.log(" 🚀 Backend Server Starting");
+console.log(" =========================================");
+console.log(" CORS CLIENT_URL:", CLIENT_URL);
+console.log(" Server PORT:", PORT);
+console.log(" NODE_ENV:", process.env.NODE_ENV || "development");
+console.log(" All env vars check:");
+console.log("   CLIENT_URL:", process.env.CLIENT_URL || "❌ NOT SET");
+console.log("   NEXT_PUBLIC_APP_URL:", process.env.NEXT_PUBLIC_APP_URL || "❌ NOT SET");
+console.log("   MONGODB_URI:", process.env.MONGODB_URI ? "✅ SET" : "❌ NOT SET");
+console.log("   JWT_SECRET:", process.env.JWT_SECRET ? "✅ SET" : "❌ NOT SET");
+console.log("   CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME ? "✅ SET" : "❌ NOT SET");
+console.log(" =========================================");
 
 // CORS configuration - allow multiple origins
+const isProduction = process.env.NODE_ENV === "production" || process.env.CLIENT_URL?.includes("https://");
 const allowedOrigins = CLIENT_URL.includes(",")
   ? CLIENT_URL.split(",").map(origin => origin.trim())
-  : [CLIENT_URL, "http://localhost:3000"]; // Always allow localhost for local dev
+  : [CLIENT_URL];
+
+// In production, only allow CLIENT_URL. In development, also allow localhost
+if (!isProduction) {
+  allowedOrigins.push("http://localhost:3000");
+}
+
+console.log(" Allowed CORS origins:", allowedOrigins);
+console.log(" Is production:", isProduction);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
+      if (!origin) {
+        console.log(" CORS: Request with no origin, allowing");
+        return callback(null, true);
+      }
+      
+      console.log(` CORS: Checking origin: ${origin}`);
       
       // Check if origin is in allowed list
-      if (allowedOrigins.includes(origin) || origin.includes("localhost")) {
+      if (allowedOrigins.includes(origin)) {
+        console.log(` CORS: ✅ Origin allowed: ${origin}`);
+        callback(null, true);
+      } else if (!isProduction && origin.includes("localhost")) {
+        // Only allow localhost in development
+        console.log(` CORS: ✅ Localhost allowed (dev mode): ${origin}`);
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        console.log(` CORS: ❌ Origin NOT allowed: ${origin}`);
+        console.log(` CORS: Allowed origins are:`, allowedOrigins);
+        callback(new Error(`CORS: Origin ${origin} is not allowed. Allowed origins: ${allowedOrigins.join(", ")}`));
       }
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 app.use(express.json());
