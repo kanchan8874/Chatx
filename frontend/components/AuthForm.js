@@ -255,17 +255,17 @@ export default function AuthForm({ mode = "login", onModeChange }) {
       );
       
       // Wait for cookie to be set in browser (cookie is set by backend in HttpOnly cookie)
-      // Small delay to ensure cookie is available for server-side components
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Increased delay to ensure cookie is available for server-side components
+      // HttpOnly cookies need a full page reload to be readable by Next.js server components
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // Use router.replace for smooth client-side navigation without page refresh
-      // This provides instant navigation without full page reload
+      // Use window.location.href for full page reload
+      // This is necessary because HttpOnly cookies set by backend are only readable
+      // by server components after a full page reload, not during client-side navigation
       console.log("Redirecting to /chat...");
       
-      // Use router.replace (not push) to avoid adding to history stack
-      // This prevents back button from going back to login page
-      // The server component will automatically re-fetch with the new cookie
-      router.replace("/chat");
+      // Full page reload ensures server component can read the HttpOnly cookie
+      window.location.href = "/chat";
     } catch (error) {
       console.error(`❌ ${mode === "login" ? "Login" : "Register"} error:`, error);
       toast.error(error.message);
