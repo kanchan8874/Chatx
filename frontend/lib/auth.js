@@ -13,13 +13,18 @@ export async function getCurrentUser() {
     // No user is not an error - user is just not logged in
     return null;
   } catch (error) {
+    // Don't log "Unauthorized" errors - they're normal when user is not logged in
+    if (error.message.includes("Unauthorized") || error.message.includes("401")) {
+      return null;
+    }
+    
     // Only log errors in development or if it's a connection error
     const isConnectionError = error.message.includes("Cannot connect") || 
                              error.message.includes("timeout") ||
                              error.message.includes("ECONNREFUSED");
     
     if (process.env.NODE_ENV !== "production" || isConnectionError) {
-      console.log("❌ Server-side auth error:", error.message);
+      console.error("❌ Server-side auth error:", error.message);
       
       // Log helpful message for connection errors
       if (isConnectionError) {

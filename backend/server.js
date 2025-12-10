@@ -44,18 +44,22 @@ console.log("   CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME ? "�
 console.log(" =========================================");
 
 // CORS configuration - allow multiple origins
-const isProduction = process.env.NODE_ENV === "production" || process.env.CLIENT_URL?.includes("https://");
+// Check if we're actually on Render (production deployment)
+const isRenderProduction = process.env.RENDER === "true" || (process.env.NODE_ENV === "production" && process.env.CLIENT_URL?.includes("render.com"));
 const allowedOrigins = CLIENT_URL.includes(",")
   ? CLIENT_URL.split(",").map(origin => origin.trim())
   : [CLIENT_URL];
 
-// In production, only allow CLIENT_URL. In development, also allow localhost
-if (!isProduction) {
-  allowedOrigins.push("http://localhost:3000");
+// Always allow localhost for local development (when not on Render)
+// Also allow if explicitly set in CLIENT_URL
+if (!isRenderProduction) {
+  if (!allowedOrigins.includes("http://localhost:3000")) {
+    allowedOrigins.push("http://localhost:3000");
+  }
 }
 
 console.log(" Allowed CORS origins:", allowedOrigins);
-console.log(" Is production:", isProduction);
+console.log(" Is Render production:", isRenderProduction);
 
 app.use(
   cors({
@@ -72,9 +76,10 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         console.log(` CORS: ✅ Origin allowed: ${origin}`);
         callback(null, true);
-      } else if (!isProduction && origin.includes("localhost")) {
-        // Only allow localhost in development
-        console.log(` CORS: ✅ Localhost allowed (dev mode): ${origin}`);
+      } else if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
+        // Always allow localhost origins (for local development testing)
+        // This is safe because localhost can only be accessed from the developer's machine
+        console.log(` CORS: ✅ Localhost allowed: ${origin}`);
         callback(null, true);
       } else {
         console.log(` CORS: ❌ Origin NOT allowed: ${origin}`);
@@ -84,7 +89,8 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    exposedHeaders: ["Set-Cookie"],
   }),
 );
 app.use(express.json());

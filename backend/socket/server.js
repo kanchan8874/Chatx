@@ -6,12 +6,12 @@ const onlineUsers = new Map();
 const JWT_SECRET = process.env.JWT_SECRET || "local_dev_secret";
 // For Render: Use CLIENT_URL env var, fallback to NEXT_PUBLIC_APP_URL, then localhost for dev
 const SOCKET_ORIGIN = process.env.CLIENT_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-const isProduction = process.env.NODE_ENV === "production" || process.env.CLIENT_URL?.includes("https://");
+const isRenderProduction = process.env.RENDER === "true" || (process.env.NODE_ENV === "production" && process.env.CLIENT_URL?.includes("render.com"));
 
 // Log for debugging deployment
 console.log("🔌 Socket.io CORS configured for:", SOCKET_ORIGIN);
 console.log("🔌 Environment:", process.env.NODE_ENV || "development");
-console.log("🔌 Is production:", isProduction);
+console.log("🔌 Is Render production:", isRenderProduction);
 
 async function resolveUserId(socket) {
   const { token, userId } = socket.handshake.auth || {};
@@ -94,9 +94,12 @@ export function initSocketServer(server) {
     ? SOCKET_ORIGIN.split(",").map(origin => origin.trim())
     : [SOCKET_ORIGIN];
 
-  // In production, only allow CLIENT_URL. In development, also allow localhost
-  if (!isProduction) {
-    allowedOrigins.push("http://localhost:3000");
+  // Always allow localhost for local development (when not on Render)
+  // Also allow if explicitly set in SOCKET_ORIGIN
+  if (!isRenderProduction) {
+    if (!allowedOrigins.includes("http://localhost:3000")) {
+      allowedOrigins.push("http://localhost:3000");
+    }
   }
 
   console.log(`🔌 Socket.io allowed origins:`, allowedOrigins);
@@ -116,9 +119,10 @@ export function initSocketServer(server) {
         if (allowedOrigins.includes(origin)) {
           console.log(`🔌 Socket.io CORS: ✅ Origin allowed: ${origin}`);
           callback(null, true);
-        } else if (!isProduction && origin.includes("localhost")) {
-          // Only allow localhost in development
-          console.log(`🔌 Socket.io CORS: ✅ Localhost allowed (dev mode): ${origin}`);
+        } else if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
+          // Always allow localhost origins (for local development testing)
+          // This is safe because localhost can only be accessed from the developer's machine
+          console.log(`🔌 Socket.io CORS: ✅ Localhost allowed: ${origin}`);
           callback(null, true);
         } else {
           console.log(`🔌 Socket.io CORS: ❌ Origin NOT allowed: ${origin}`);

@@ -43,9 +43,9 @@ export async function serverFetch(path, options = {}) {
       headers.Cookie = `${AUTH_COOKIE_NAME}=${token}`;
     }
 
-    // Add timeout for server-side requests (10 seconds)
+    // Add timeout for server-side requests (5 seconds - Render free tier can be slow)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
       const response = await fetch(url, {
@@ -60,6 +60,12 @@ export async function serverFetch(path, options = {}) {
       clearTimeout(timeoutId);
 
       const data = await response.json().catch(() => ({}));
+      
+      // 401 Unauthorized is a normal state (user not logged in) - don't throw error
+      if (response.status === 401) {
+        return { user: null };
+      }
+      
       if (!response.ok) {
         throw new Error(data.error || `Request failed with status ${response.status}`);
       }
@@ -80,6 +86,11 @@ export async function serverFetch(path, options = {}) {
       throw fetchError;
     }
   } catch (error) {
+    // Don't log 401 Unauthorized as errors - it's a normal state
+    if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+      return { user: null };
+    }
+    
     // Log error details for debugging (only in development)
     if (process.env.NODE_ENV !== "production") {
       console.error(`Server-side fetch error for ${url}:`, error.message);
