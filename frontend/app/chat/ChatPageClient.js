@@ -24,11 +24,19 @@ export default function ChatPageClient({ initialUser, initialChats, initialMessa
       setIsLoading(true);
       console.log("🔍 Client-side auth check starting...");
       const apiBase = getBrowserApiBase();
+      console.log("   API Base URL:", apiBase || "relative (using proxy)");
+      console.log("   Request URL:", `${apiBase}/api/auth/me`);
+      console.log("   Current origin:", typeof window !== "undefined" ? window.location.origin : "server");
+      
       const response = await fetch(`${apiBase}/api/auth/me`, {
         credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
 
       console.log("🔍 Auth check response status:", response.status);
+      console.log("   Response headers:", Object.fromEntries(response.headers.entries()));
 
       if (response.ok) {
         const data = await response.json();
@@ -40,15 +48,20 @@ export default function ChatPageClient({ initialUser, initialChats, initialMessa
           
           // Fetch chats if we have user
           try {
+            console.log("📥 Fetching chats for user...");
             const chatsResponse = await fetch(`${apiBase}/api/chat`, {
               credentials: "include",
             });
             if (chatsResponse.ok) {
               const chatsData = await chatsResponse.json();
-              setChats(chatsData.chats || []);
+              const fetchedChats = chatsData.chats || [];
+              console.log(`✅ Fetched ${fetchedChats.length} chats`);
+              setChats(fetchedChats);
+            } else {
+              console.error("❌ Failed to fetch chats:", chatsResponse.status);
             }
           } catch (chatsError) {
-            console.error("Error fetching chats:", chatsError);
+            console.error("❌ Error fetching chats:", chatsError);
           }
         } else {
           console.log("❌ No user in response, redirecting to login");
@@ -56,6 +69,11 @@ export default function ChatPageClient({ initialUser, initialChats, initialMessa
         }
       } else {
         console.log("❌ Auth check failed with status:", response.status);
+        if (response.status === 401) {
+          console.log("   ℹ️ Not authenticated. Please log in first.");
+          console.log("   💡 If you just logged in, cookies may be blocked by browser.");
+          console.log("   💡 Try enabling third-party cookies or use a local backend for development.");
+        }
         router.replace("/login");
       }
     } catch (error) {
@@ -72,6 +90,15 @@ export default function ChatPageClient({ initialUser, initialChats, initialMessa
       console.log("✅ User available from server:", initialUser.email);
       setUser(initialUser);
       setIsLoading(false);
+      
+      // Ensure chats are set from server
+      if (initialChats && initialChats.length > 0) {
+        console.log(`✅ Setting ${initialChats.length} chats from server`);
+        setChats(initialChats);
+      } else if (initialChats && initialChats.length === 0) {
+        console.log("ℹ️ No chats from server (empty array)");
+        setChats([]);
+      }
       return;
     }
 
@@ -81,7 +108,7 @@ export default function ChatPageClient({ initialUser, initialChats, initialMessa
       console.log("🔍 No user from server, checking client-side...");
       checkAuth();
     }
-  }, [initialUser, checkAuth]);
+  }, [initialUser, checkAuth, initialChats]);
 
   if (isLoading) {
     return (

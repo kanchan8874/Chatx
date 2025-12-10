@@ -31,24 +31,189 @@ export default function ChatShell({
   const { socket } = useSocket(user);
   const apiBase = useMemo(() => getBrowserApiBase(), []);
   
-  // Use ref to always get the latest activeChatId in socket handlers
+  // Use refs to always get the latest values in handlers
   const activeChatIdRef = useRef(activeChatId);
+  const messagesRef = useRef(messages);
+  const isLoadingMessagesRef = useRef(isLoadingMessages);
   
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
   }, [activeChatId]);
+  
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  
+  useEffect(() => {
+    isLoadingMessagesRef.current = isLoadingMessages;
+  }, [isLoadingMessages]);
 
   useEffect(() => {
     setActiveChatId(serverActiveChatId || null);
   }, [serverActiveChatId]);
 
-  useEffect(() => {
-    setChats(initialChats);
-  }, [initialChats]);
+  // Define loadMessages before useEffects that use it
+  // Use refs for state values to keep the function stable
+  const loadMessages = useCallback(
+    async (chatId) => {
+      if (!chatId) return;
+      
+      // Don't reload if we're already loading (use ref to avoid dependency)
+      if (isLoadingMessagesRef.current) {
+        console.log("⚠️ Already loading messages, skipping...");
+        return;
+      }
+      
+      // Get current messages using ref to avoid stale closure
+      const currentMessages = messagesRef.current;
+      const chatIdStr = chatId?.toString();
+      
+      setIsLoadingMessages(true);
+      console.log(`📥 Loading messages for chat: ${chatId}`);
+      console.log(`   API Base: ${apiBase}`);
+      console.log(`   Full URL: ${apiBase}/api/messages/${chatId}`);
+      try {
+        const response = await fetch(`${apiBase}/api/messages/${chatId}`, {
+          credentials: "include",
+        });
+        console.log(`   Response status: ${response.status}`);
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "Unknown error");
+          console.error(`   ❌ Error response: ${errorText}`);
+          throw new Error(`Unable to load messages: ${response.status} ${errorText}`);
+        }
+        const data = await response.json();
+        const loadedMessages = data.messages || [];
+        console.log(`📥 Loaded ${loadedMessages.length} messages from API`);
+        
+        // Get existing messages for this chat
+        const existingMessages = currentMessages.filter(
+          (m) => (m.chatId === chatId || m.chatId?.toString() === chatIdStr)
+        );
+        
+        // Create a Set of existing message IDs for quick lookup
+        const existingIds = new Set(
+          existingMessages.map((m) => m.id || m._id).filter(Boolean)
+        );
+        
+        // Remove duplicates within loaded messages and filter out messages we already have
+        const newMessages = loadedMessages.filter((message, index, self) => {
+          const messageId = message.id || message._id;
+          if (!messageId) {
+            console.warn("⚠️ Message without ID:", message);
+            return false;
+          }
+          
+          // Check if this is the first occurrence of this message ID in the loaded array
+          const firstIndex = self.findIndex((m) => {
+            const mId = m.id || m._id;
+            return mId === messageId;
+          });
+          
+          // Keep only if it's the first occurrence AND we don't already have it
+          return index === firstIndex && !existingIds.has(messageId);
+        });
+        
+        // Merge: keep existing messages + add new ones, sorted by createdAt
+        const mergedMessages = [...existingMessages, ...newMessages].sort((a, b) => {
+          const timeA = new Date(a.createdAt || 0).getTime();
+          const timeB = new Date(b.createdAt || 0).getTime();
+          return timeA - timeB;
+        });
+        
+        console.log(`📥 Merged messages: ${existingMessages.length} existing + ${newMessages.length} new = ${mergedMessages.length} total`);
+        setMessages(mergedMessages);
+      } catch (error) {
+        console.error("❌ Error loading messages:", error);
+        toast.error(error.message);
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    },
+    [apiBase], // Only apiBase as dependency - use refs for state values
+  );
 
   useEffect(() => {
-    setMessages(initialMessages);
-  }, [initialMessages]);
+    if (initialChats && initialChats.length > 0) {
+      setChats(initialChats);
+      console.log(`✅ Loaded ${initialChats.length} chats into state`);
+    } else if (initialChats && initialChats.length === 0) {
+      // If initialChats is empty array, still set it to avoid undefined
+      setChats([]);
+    }
+  }, [initialChats]);
+  
+  // Sync URL with activeChatId (without navigation) when activeChatId changes
+  useEffect(() => {
+    if (activeChatId && typeof window !== "undefined") {
+      const currentPath = window.location.pathname;
+      const expectedPath = `/chat/${activeChatId}`;
+      if (currentPath !== expectedPath && currentPath.startsWith("/chat")) {
+        // Update URL without causing navigation
+        window.history.replaceState({}, "", expectedPath);
+      }
+    } else if (!activeChatId && typeof window !== "undefined" && window.location.pathname.startsWith("/chat/")) {
+      // If no activeChatId but URL has chatId, go back to /chat
+      window.history.replaceState({}, "", "/chat");
+    }
+  }, [activeChatId]);
+
+  useEffect(() => {
+    // Update messages when initialMessages change
+    // Merge with existing messages instead of replacing
+    if (initialMessages && initialMessages.length > 0) {
+      // Check if messages are for the active chat
+      const firstMessage = initialMessages[0];
+      const lastMessage = initialMessages[initialMessages.length - 1];
+      const messagesChatId = firstMessage?.chatId || lastMessage?.chatId;
+      
+      // If messages match activeChatId or if activeChatId is not set yet, merge initialMessages
+      if (!activeChatId || messagesChatId === activeChatId || messagesChatId === activeChatId?.toString()) {
+        setMessages((prev) => {
+          // Create a Set of existing message IDs
+          const existingIds = new Set(
+            prev.map((m) => m.id || m._id).filter(Boolean)
+          );
+          
+          // Filter out messages we already have
+          const newMessages = initialMessages.filter((m) => {
+            const mId = m.id || m._id;
+            return mId && !existingIds.has(mId);
+          });
+          
+          // Merge and sort by createdAt
+          const merged = [...prev, ...newMessages].sort((a, b) => {
+            const timeA = new Date(a.createdAt || 0).getTime();
+            const timeB = new Date(b.createdAt || 0).getTime();
+            return timeA - timeB;
+          });
+          
+          console.log(`✅ Merged initialMessages: ${prev.length} existing + ${newMessages.length} new = ${merged.length} total for chat: ${messagesChatId}`);
+          return merged;
+        });
+      }
+    } else if (initialMessages && initialMessages.length === 0 && activeChatId) {
+      // If initialMessages is empty array and we have an activeChatId, load messages
+      console.log(`📥 Initial messages empty, loading messages for chat: ${activeChatId}`);
+      loadMessages(activeChatId);
+    }
+  }, [initialMessages, activeChatId, loadMessages]);
+
+  // Load messages when activeChatId changes (from props or selection)
+  useEffect(() => {
+    if (activeChatId && !isLoadingMessages) {
+      // Check if we already have messages for this chat
+      const hasMessagesForChat = messages.length > 0 && 
+        (messages[0]?.chatId === activeChatId || messages[0]?.chatId === activeChatId?.toString());
+      
+      if (!hasMessagesForChat) {
+        console.log(`📥 Loading messages for active chat: ${activeChatId}`);
+        loadMessages(activeChatId);
+      } else {
+        console.log(`✅ Already have ${messages.length} messages for chat: ${activeChatId}`);
+      }
+    }
+  }, [activeChatId, loadMessages, isLoadingMessages]);
 
   useEffect(() => {
     if (!serverActiveChatId && initialChats.length && !activeChatId) {
@@ -335,15 +500,28 @@ export default function ChatShell({
     
     // Mark messages as read when chat becomes active
     console.log(`📖 Marking messages as read for chat: ${activeChatId}`);
+    console.log(`   API Base: ${apiBase}`);
+    console.log(`   Full URL: ${apiBase}/api/messages/${activeChatId}/read`);
     fetch(`${apiBase}/api/messages/${activeChatId}/read`, {
       method: "PATCH",
       credentials: "include",
     })
-      .then(() => {
-        console.log(`   ✅ Messages marked as read for chat: ${activeChatId}`);
+      .then((response) => {
+        console.log(`   Mark read response status: ${response.status}`);
+        if (!response.ok) {
+          console.error(`   ❌ Failed to mark as read: ${response.status}`);
+        } else {
+          console.log(`   ✅ Messages marked as read for chat: ${activeChatId}`);
+        }
       })
       .catch((err) => {
         console.error(`   ⚠️ Failed to mark messages as read:`, err);
+        console.error(`   Error details:`, {
+          name: err.name,
+          message: err.message,
+          apiBase,
+          activeChatId,
+        });
       });
     
     // Reset unread count for active chat
@@ -366,39 +544,72 @@ export default function ChatShell({
     [chats, activeChatId],
   );
 
-  const loadMessages = useCallback(
-    async (chatId) => {
-      if (!chatId) return;
-      setIsLoadingMessages(true);
-      try {
-        const response = await fetch(`${apiBase}/api/messages/${chatId}`, {
-          credentials: "include",
-        });
-        if (!response.ok) {
-          throw new Error("Unable to load messages.");
-        }
-        const data = await response.json();
-        const loadedMessages = data.messages || [];
-        // Remove duplicates based on ID
-        const uniqueMessages = loadedMessages.filter((message, index, self) => 
-          index === self.findIndex((m) => (m.id === message.id) || (m._id === message._id))
-        );
-        setMessages(uniqueMessages);
-      } catch (error) {
-        toast.error(error.message);
-      } finally {
-        setIsLoadingMessages(false);
-      }
-    },
-    [apiBase],
-  );
-
   const handleSelectChat = (chatId) => {
+    if (!chatId) return;
+    
+    // Don't reload if clicking on the same chat that's already active
+    const currentChatIdStr = activeChatId?.toString();
+    const newChatIdStr = chatId?.toString();
+    if (currentChatIdStr === newChatIdStr) {
+      console.log(`ℹ️ Chat ${chatId} is already active, skipping reload`);
+      setIsSidebarOpen(false);
+      return;
+    }
+    
+    // Verify chat exists in chats list before selecting
+    const chatExists = chats.some((chat) => chat.id === chatId || chat.id?.toString() === newChatIdStr);
+    if (!chatExists) {
+      console.warn(`⚠️ Chat ${chatId} not found in chats list`);
+      // Try to reload chats
+      fetch(`${apiBase}/api/chat`, {
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.chats) {
+            setChats(data.chats);
+            // Check again after reloading
+            const stillExists = data.chats.some((chat) => chat.id === chatId || chat.id?.toString() === newChatIdStr);
+            if (stillExists) {
+              setActiveChatId(chatId);
+              // Only load messages if we don't already have them
+              const hasMessages = messages.length > 0 && 
+                (messages[0]?.chatId === chatId || messages[0]?.chatId?.toString() === newChatIdStr);
+              if (!hasMessages) {
+                loadMessages(chatId);
+              }
+            } else {
+              console.error(`❌ Chat ${chatId} still not found after reload`);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error("Error reloading chats:", err);
+        });
+      return;
+    }
+    
+    // Update active chat - only load messages if we don't already have them for this chat
     setActiveChatId(chatId);
-    router.push(`/chat/${chatId}`);
-    loadMessages(chatId);
+    
+    // Check if we already have messages for this chat
+    const hasMessagesForChat = messages.length > 0 && 
+      (messages[0]?.chatId === chatId || messages[0]?.chatId?.toString() === newChatIdStr);
+    
+    if (!hasMessagesForChat) {
+      console.log(`📥 Loading messages for chat: ${chatId}`);
+      loadMessages(chatId);
+    } else {
+      console.log(`✅ Already have ${messages.length} messages for chat: ${chatId}, skipping reload`);
+    }
+    
     // Close sidebar on mobile after selecting chat
     setIsSidebarOpen(false);
+    
+    // Update URL without navigation to preserve state (like WhatsApp)
+    if (typeof window !== "undefined") {
+      window.history.pushState({}, "", `/chat/${chatId}`);
+    }
   };
 
   const handleSendMessage = async (text, attachments = []) => {

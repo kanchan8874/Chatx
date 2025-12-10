@@ -8,7 +8,7 @@ export async function getCurrentUser() {
       if (process.env.NODE_ENV !== "production") {
         console.log("✅ Server-side auth: User found", data.user.email);
       }
-      return data.user;
+    return data.user;
     }
     // No user is not an error - user is just not logged in
     return null;

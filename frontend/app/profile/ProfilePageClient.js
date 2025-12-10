@@ -30,7 +30,7 @@ export default function ProfilePageClient({ initialUser }) {
   const fileInputRef = useRef(null);
   const [user, setUser] = useState(initialUser);
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!initialUser);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(user?.avatar || null);
   const [formData, setFormData] = useState({
@@ -49,11 +49,71 @@ export default function ProfilePageClient({ initialUser }) {
     email: false,
     phone: false,
   });
+  const hasCheckedAuthRef = useRef(false);
+
+  // Client-side auth check
+  useEffect(() => {
+    // If user is available from server, we're done
+    if (initialUser) {
+      console.log("✅ User available from server:", initialUser.email);
+      setUser(initialUser);
+      setIsLoading(false);
+      return;
+    }
+
+    // If user is not available from server, try to fetch client-side
+    if (!initialUser && !hasCheckedAuthRef.current) {
+      console.log("🔍 No user from server, checking client-side...");
+      hasCheckedAuthRef.current = true;
+      
+      const checkAuth = async () => {
+        try {
+          setIsLoading(true);
+          const apiBase = getBrowserApiBase();
+          const response = await fetch(`${apiBase}/api/auth/me`, {
+            credentials: "include",
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.user) {
+              console.log("✅ User found:", data.user.email);
+              setUser(data.user);
+              setIsLoading(false);
+            } else {
+              console.log("❌ No user in response, redirecting to login");
+              router.replace("/login");
+            }
+          } else {
+            console.log("❌ Auth check failed with status:", response.status);
+            router.replace("/login");
+          }
+        } catch (error) {
+          console.error("❌ Auth check error:", error);
+          router.replace("/login");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      checkAuth();
+    }
+  }, [initialUser, router]);
 
   useEffect(() => {
-    // Refresh user data
-    loadProfile();
-  }, []);
+    // Update formData when user changes
+    if (user) {
+      setFormData({
+        username: user.username || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        avatar: user.avatar || "",
+      });
+      setAvatarPreview(user.avatar || null);
+      // Refresh user data
+      loadProfile();
+    }
+  }, [user]);
 
   useEffect(() => {
     // Update avatar preview when user changes
@@ -260,6 +320,21 @@ export default function ProfilePageClient({ initialUser }) {
       }
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto mb-4"></div>
+          <p className="text-gray-300">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect
+  }
 
   return (
     <div className="relative flex min-h-screen items-start justify-center overflow-y-auto bg-gradient-to-br from-background-dark via-background-dark to-primary-900/20 p-2 sm:p-4 md:p-6 lg:p-8">

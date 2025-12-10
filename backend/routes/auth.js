@@ -8,6 +8,7 @@ import {
   clearAuthCookie,
   getUserFromRequest,
   sanitizeUser,
+  AUTH_COOKIE_NAME,
 } from "../lib/auth.js";
 import { validateEmail, validatePassword, validateUsername } from "../lib/validation.js";
 
@@ -101,7 +102,7 @@ router.post("/register", async (req, res) => {
     console.log(`   - Database: ${user.constructor.db.name}`);
     console.log(`   - Collection: ${user.constructor.collection.name}`);
 
-    attachAuthCookie(res, user._id.toString());
+    attachAuthCookie(res, user._id.toString(), req);
     return res.status(201).json({ user: sanitizeUser(user) });
   } catch (error) {
     console.error(" Register error:", error);
@@ -161,7 +162,7 @@ router.post("/login", async (req, res) => {
     }
 
     console.log(` Password verified. Setting auth cookie...`);
-    attachAuthCookie(res, user._id.toString());
+    attachAuthCookie(res, user._id.toString(), req);
     console.log(`Login successful for: ${user.username} (${user.email})`);
     
     return res.json({ user: sanitizeUser(user) });
@@ -172,15 +173,37 @@ router.post("/login", async (req, res) => {
 });
 
 router.post("/logout", (req, res) => {
-  clearAuthCookie(res);
+  clearAuthCookie(res, req);
   return res.json({ success: true });
 });
 
 router.get("/me", async (req, res) => {
+  // Debug cookie headers
+  console.log("🔍 /me endpoint - Checking authentication");
+  console.log("   Request origin:", req.headers.origin || "none");
+  console.log("   Request referer:", req.headers.referer || "none");
+  console.log("   Cookie header:", req.headers.cookie || "none");
+  console.log("   Parsed cookies:", req.cookies || {});
+  console.log("   Auth cookie value:", req.cookies?.[AUTH_COOKIE_NAME] || "NOT FOUND");
+  // Debug cookie reception
+  console.log("🔍 /api/auth/me request received");
+  console.log("   Origin:", req.headers.origin);
+  console.log("   Cookie header:", req.headers.cookie ? "present" : "missing");
+  console.log("   Parsed cookies:", req.cookies);
+  console.log("   Auth cookie value:", req.cookies?.chatx_token ? "present" : "missing");
+  
   const user = await getUserFromRequest(req);
   if (!user) {
+    console.log("   ❌ No user found - returning 401");
+    console.log("   Debug info:", {
+      hasCookies: !!req.cookies,
+      hasCookieHeader: !!req.headers.cookie,
+      cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
+      authCookiePresent: !!req.cookies?.chatx_token,
+    });
     return res.status(401).json({ error: "Unauthorized" });
   }
+  console.log("   ✅ User found:", user.email);
   return res.json({ user });
 });
 

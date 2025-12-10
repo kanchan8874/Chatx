@@ -255,16 +255,40 @@ export default function AuthForm({ mode = "login", onModeChange }) {
       );
       
       // Wait for cookie to be set in browser (cookie is set by backend in HttpOnly cookie)
-      // Reduced delay since client component will handle auth check
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Cross-origin cookies need more time to be set and persisted
+      console.log("⏳ Waiting for auth cookie to be set...");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // Use router.push for smooth client-side navigation without page refresh
-      // The ChatPageClient component will handle auth check client-side
-      // This provides smooth navigation without full page reload
-      console.log("Redirecting to /chat...");
-      
-      // Smooth client-side navigation
-      router.push("/chat");
+      // Verify cookie was set by checking if we can access it
+      // Note: HttpOnly cookies can't be accessed via JavaScript, so we'll verify via API call
+      console.log("🔍 Verifying auth cookie...");
+      const apiBase = getBrowserApiBase();
+      try {
+        const verifyResponse = await fetch(`${apiBase}/api/auth/me`, {
+          credentials: "include",
+        });
+        
+        if (verifyResponse.ok) {
+          const verifyData = await verifyResponse.json();
+          if (verifyData.user) {
+            console.log("✅ Auth cookie verified, redirecting...");
+            // Use window.location for full page reload to ensure cookie is sent
+            // This is more reliable for cross-origin cookies
+            window.location.href = "/chat";
+          } else {
+            console.warn("⚠️ Cookie verification failed, using full page reload...");
+            window.location.href = "/chat";
+          }
+        } else {
+          console.warn("⚠️ Cookie verification returned", verifyResponse.status, ", using full page reload...");
+          // Use full page reload to ensure cookie is properly sent
+          window.location.href = "/chat";
+        }
+      } catch (verifyError) {
+        console.error("⚠️ Cookie verification error:", verifyError);
+        // Use full page reload as fallback
+        window.location.href = "/chat";
+      }
     } catch (error) {
       console.error(`❌ ${mode === "login" ? "Login" : "Register"} error:`, error);
       toast.error(error.message);

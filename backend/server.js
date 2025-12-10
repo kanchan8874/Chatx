@@ -44,22 +44,30 @@ console.log("   CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME ? "�
 console.log(" =========================================");
 
 // CORS configuration - allow multiple origins
-// Check if we're actually on Render (production deployment)
-const isRenderProduction = process.env.RENDER === "true" || (process.env.NODE_ENV === "production" && process.env.CLIENT_URL?.includes("render.com"));
+// Check if backend is actually running on Render (production deployment)
+const isBackendOnRender = process.env.RENDER === "true";
+// If PORT is 10000, 4000, or matches BACKEND_PORT, we're likely running locally
+// Also check if we're NOT on Render (RENDER env var not set)
+const isBackendLocal = !isBackendOnRender && (
+  PORT === 4000 || 
+  PORT === 10000 || 
+  PORT === parseInt(process.env.BACKEND_PORT || "4000") ||
+  (typeof process.env.RENDER === "undefined" && PORT < 10000)
+);
+
 const allowedOrigins = CLIENT_URL.includes(",")
   ? CLIENT_URL.split(",").map(origin => origin.trim())
   : [CLIENT_URL];
 
-// Always allow localhost for local development (when not on Render)
-// Also allow if explicitly set in CLIENT_URL
-if (!isRenderProduction) {
-  if (!allowedOrigins.includes("http://localhost:3000")) {
-    allowedOrigins.push("http://localhost:3000");
-  }
+// ALWAYS allow localhost:3000 for development/testing
+// This allows frontend on localhost to work with both local and production backends
+if (!allowedOrigins.includes("http://localhost:3000")) {
+  allowedOrigins.push("http://localhost:3000");
 }
 
 console.log(" Allowed CORS origins:", allowedOrigins);
-console.log(" Is Render production:", isRenderProduction);
+console.log(" Is backend on Render:", isBackendOnRender);
+console.log(" Is backend local:", isBackendLocal);
 
 // CORS middleware with explicit preflight handling
 app.use(
@@ -73,20 +81,32 @@ app.use(
       
       console.log(` CORS: Checking origin: ${origin}`);
       
-      // Check if origin is in allowed list
+      // FIRST: Always allow localhost origins (for local development testing)
+      // This is safe because localhost can only be accessed from the developer's machine
+      if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
+        console.log(` CORS: ✅ Localhost allowed: ${origin}`);
+        callback(null, true);
+        return;
+      }
+      
+      // SECOND: Check if origin is in allowed list
       if (allowedOrigins.includes(origin)) {
         console.log(` CORS: ✅ Origin allowed: ${origin}`);
         callback(null, true);
-      } else if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
-        // Always allow localhost origins (for local development testing)
-        // This is safe because localhost can only be accessed from the developer's machine
-        console.log(` CORS: ✅ Localhost allowed: ${origin}`);
-        callback(null, true);
-      } else {
-        console.log(` CORS: ❌ Origin NOT allowed: ${origin}`);
-        console.log(` CORS: Allowed origins are:`, allowedOrigins);
-        callback(new Error(`CORS: Origin ${origin} is not allowed. Allowed origins: ${allowedOrigins.join(", ")}`));
+        return;
       }
+      
+      // THIRD: For development, be more lenient - allow if backend is local
+      if (isBackendLocal) {
+        console.log(` CORS: ⚠️ Backend is local, allowing origin anyway: ${origin}`);
+        callback(null, true);
+        return;
+      }
+      
+      // FINALLY: Reject if none of the above conditions match
+      console.log(` CORS: ❌ Origin NOT allowed: ${origin}`);
+      console.log(` CORS: Allowed origins are:`, allowedOrigins);
+      callback(new Error(`CORS: Origin ${origin} is not allowed. Allowed origins: ${allowedOrigins.join(", ")}`));
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
