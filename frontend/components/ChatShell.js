@@ -271,7 +271,21 @@ export default function ChatShell({
       setChats((prev) => {
         const exists = prev.some((chat) => chat.id === chatId);
         if (!exists) {
-          router.refresh();
+          // Don't refresh the page - just fetch chats client-side
+          // router.refresh() causes full page reload which can cause redirect issues
+          console.log("🔄 New chat detected, fetching chats...");
+          fetch(`${apiBase}/api/chat`, {
+            credentials: "include",
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.chats) {
+                setChats(data.chats);
+              }
+            })
+            .catch((err) => {
+              console.error("Error fetching chats:", err);
+            });
           return prev;
         }
 
