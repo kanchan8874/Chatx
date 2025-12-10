@@ -39,7 +39,7 @@ function formatMessage(messageDoc) {
   
   // Ensure chatId is always a string
   if (!chatId) {
-    console.error("⚠️ Warning: Message has no chatId!", {
+    console.error("Warning: Message has no chatId!", {
       messageId: messageDoc._id?.toString(),
       chat: messageDoc.chat,
       chatType: typeof messageDoc.chat,

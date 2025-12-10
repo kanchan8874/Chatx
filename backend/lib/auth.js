@@ -5,10 +5,7 @@ import User from "../models/User.js";
 export const AUTH_COOKIE_NAME = "chatx_token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-// Cookie options - different for production (HTTPS) vs development (HTTP)
-// We need to detect the request origin to set appropriate cookie options
-// If request is from HTTP (localhost), use secure=false, sameSite=lax
-// If request is from HTTPS, use secure=true, sameSite=none (for cross-origin)
+
 
 function getCookieOptions(request) {
   // Get the origin from the request
@@ -32,14 +29,7 @@ function getCookieOptions(request) {
     sameSite = "none";
     secure = true;
   } else if (isRequestHTTP && isBackendHTTPS) {
-    // Special case: Backend is HTTPS (Render), Frontend is HTTP (localhost)
-    // Browsers won't send Secure cookies to HTTP origins, so we must use:
-    // - secure: false (required for HTTP origins)
-    // - sameSite: "none" (for cross-origin, but browsers may block this without Secure)
-    // Actually, browsers block SameSite=None without Secure, so we need a workaround
-    // Try using "lax" - it might work if the cookie domain/path allows it
-    // But for true cross-origin, we need SameSite=None + Secure, which won't work
-    // So we'll use "lax" and hope the browser accepts it (some browsers are lenient)
+    
     sameSite = "lax"; // Try lax first - some browsers allow cross-origin with lax
     secure = false; // Must be false for HTTP origins
   } else if (isRequestHTTP) {
@@ -52,7 +42,7 @@ function getCookieOptions(request) {
     secure = isBackendHTTPS;
   }
   
-  console.log(`🍪 Cookie options determined:`, {
+  console.log(` Cookie options determined:`, {
     origin,
     isRequestHTTP,
     isRequestHTTPS,
@@ -145,7 +135,7 @@ export function attachAuthCookie(response, userId, request = null) {
   
   const origin = request?.headers?.origin || request?.headers?.referer || "unknown";
   
-  console.log(`🍪 Setting cookie: ${AUTH_COOKIE_NAME}`);
+  console.log(`Setting cookie: ${AUTH_COOKIE_NAME}`);
   console.log(`   Request origin: ${origin}`);
   console.log(`   Cookie Options:`, {
     httpOnly: cookieOptions.httpOnly,

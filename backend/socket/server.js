@@ -9,9 +9,9 @@ const SOCKET_ORIGIN = process.env.CLIENT_URL || process.env.NEXT_PUBLIC_APP_URL 
 const isRenderProduction = process.env.RENDER === "true" || (process.env.NODE_ENV === "production" && process.env.CLIENT_URL?.includes("render.com"));
 
 // Log for debugging deployment
-console.log("🔌 Socket.io CORS configured for:", SOCKET_ORIGIN);
-console.log("🔌 Environment:", process.env.NODE_ENV || "development");
-console.log("🔌 Is Render production:", isRenderProduction);
+console.log(" Socket.io CORS configured for:", SOCKET_ORIGIN);
+console.log(" Environment:", process.env.NODE_ENV || "development");
+console.log(" Is Render production:", isRenderProduction);
 
 async function resolveUserId(socket) {
   const { token, userId } = socket.handshake.auth || {};
@@ -102,31 +102,31 @@ export function initSocketServer(server) {
     }
   }
 
-  console.log(`🔌 Socket.io allowed origins:`, allowedOrigins);
+  console.log(` Socket.io allowed origins:`, allowedOrigins);
 
   io = new Server(server, {
     cors: {
       origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) {
-          console.log("🔌 Socket.io CORS: Request with no origin, allowing");
+          console.log(" Socket.io CORS: Request with no origin, allowing");
           return callback(null, true);
         }
         
-        console.log(`🔌 Socket.io CORS: Checking origin: ${origin}`);
+        console.log(` Socket.io CORS: Checking origin: ${origin}`);
         
         // Check if origin is in allowed list
         if (allowedOrigins.includes(origin)) {
-          console.log(`🔌 Socket.io CORS: ✅ Origin allowed: ${origin}`);
+          console.log(` Socket.io CORS: ✅ Origin allowed: ${origin}`);
           callback(null, true);
         } else if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
           // Always allow localhost origins (for local development testing)
           // This is safe because localhost can only be accessed from the developer's machine
-          console.log(`🔌 Socket.io CORS: ✅ Localhost allowed: ${origin}`);
+          console.log(` Socket.io CORS: ✅ Localhost allowed: ${origin}`);
           callback(null, true);
         } else {
-          console.log(`🔌 Socket.io CORS: ❌ Origin NOT allowed: ${origin}`);
-          console.log(`🔌 Socket.io CORS: Allowed origins are:`, allowedOrigins);
+          console.log(` Socket.io CORS: ❌ Origin NOT allowed: ${origin}`);
+          console.log(` Socket.io CORS: Allowed origins are:`, allowedOrigins);
           callback(new Error(`Socket.io CORS: Origin ${origin} is not allowed. Allowed origins: ${allowedOrigins.join(", ")}`));
         }
       },
@@ -139,10 +139,10 @@ export function initSocketServer(server) {
     pingInterval: 25000,
   });
 
-  console.log(`🔌 Socket.io server initialized`);
+  console.log(` Socket.io server initialized`);
 
   io.on("connection", async (socket) => {
-    console.log(`🔌 New socket connection: ${socket.id}`);
+    console.log(` New socket connection: ${socket.id}`);
     
     const currentUserId = await resolveUserId(socket);
     console.log(`   User ID: ${currentUserId || "Unauthenticated"}`);
