@@ -10,42 +10,67 @@ export default function ChatPageClient({ initialUser, initialChats, initialMessa
   const [user, setUser] = useState(initialUser);
   const [chats, setChats] = useState(initialChats || []);
   const [isLoading, setIsLoading] = useState(!initialUser);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   useEffect(() => {
+    // If user is available from server, we're done
+    if (initialUser) {
+      console.log("✅ User available from server:", initialUser.email);
+      setUser(initialUser);
+      setIsLoading(false);
+      return;
+    }
+
     // If user is not available from server, try to fetch client-side
-    if (!user && !isLoading) {
+    // Only check once to avoid infinite loops
+    if (!initialUser && !hasCheckedAuth) {
+      console.log("🔍 No user from server, checking client-side...");
+      setHasCheckedAuth(true);
       checkAuth();
     }
-  }, []);
+  }, [initialUser, hasCheckedAuth]);
 
   const checkAuth = async () => {
     try {
       setIsLoading(true);
+      console.log("🔍 Client-side auth check starting...");
       const apiBase = getBrowserApiBase();
       const response = await fetch(`${apiBase}/api/auth/me`, {
         credentials: "include",
       });
 
+      console.log("🔍 Auth check response status:", response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log("🔍 Auth check data:", data);
         if (data.user) {
+          console.log("✅ User found:", data.user.email);
           setUser(data.user);
+          setIsLoading(false);
+          
           // Fetch chats if we have user
-          const chatsResponse = await fetch(`${apiBase}/api/chat`, {
-            credentials: "include",
-          });
-          if (chatsResponse.ok) {
-            const chatsData = await chatsResponse.json();
-            setChats(chatsData.chats || []);
+          try {
+            const chatsResponse = await fetch(`${apiBase}/api/chat`, {
+              credentials: "include",
+            });
+            if (chatsResponse.ok) {
+              const chatsData = await chatsResponse.json();
+              setChats(chatsData.chats || []);
+            }
+          } catch (chatsError) {
+            console.error("Error fetching chats:", chatsError);
           }
         } else {
+          console.log("❌ No user in response, redirecting to login");
           router.replace("/login");
         }
       } else {
+        console.log("❌ Auth check failed with status:", response.status);
         router.replace("/login");
       }
     } catch (error) {
-      console.error("Auth check error:", error);
+      console.error("❌ Auth check error:", error);
       router.replace("/login");
     } finally {
       setIsLoading(false);
