@@ -61,6 +61,7 @@ if (!isRenderProduction) {
 console.log(" Allowed CORS origins:", allowedOrigins);
 console.log(" Is Render production:", isRenderProduction);
 
+// CORS middleware with explicit preflight handling
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -89,10 +90,38 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie", "X-Requested-With"],
     exposedHeaders: ["Set-Cookie"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   }),
 );
+
+// Explicit OPTIONS handler as fallback (though cors should handle it)
+app.options("*", (req, res) => {
+  const origin = req.headers.origin;
+  console.log(` CORS: OPTIONS preflight request from: ${origin}`);
+  
+  if (!origin) {
+    return res.sendStatus(204);
+  }
+  
+  // Check if origin is allowed
+  const isAllowed = allowedOrigins.includes(origin) || 
+                    origin.includes("localhost") || 
+                    origin.includes("127.0.0.1");
+  
+  if (isAllowed) {
+    res.header("Access-Control-Allow-Origin", origin);
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, Cookie, X-Requested-With");
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Access-Control-Expose-Headers", "Set-Cookie");
+    return res.sendStatus(204);
+  }
+  
+  return res.sendStatus(403);
+});
 app.use(express.json());
 app.use(cookieParser());
 
