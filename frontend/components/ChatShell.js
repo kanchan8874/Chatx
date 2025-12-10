@@ -297,8 +297,21 @@ export default function ChatShell({
       console.log("   Message _id:", message._id);
       
       // Normalize chatId for comparison (handle both string and ObjectId formats)
-      const messageChatId = (message.chatId || message.chat)?.toString();
-      const currentActiveChatIdStr = currentActiveChatId?.toString();
+      // Try multiple ways to extract and normalize chatId
+      let messageChatId = null;
+      if (message.chatId) {
+        messageChatId = String(message.chatId).trim();
+      } else if (message.chat) {
+        messageChatId = String(message.chat).trim();
+      }
+      
+      // Normalize current active chat ID - try both ref and state
+      let currentActiveChatIdStr = null;
+      if (currentActiveChatId) {
+        currentActiveChatIdStr = String(currentActiveChatId).trim();
+      } else if (activeChatId) {
+        currentActiveChatIdStr = String(activeChatId).trim();
+      }
       
       console.log("   Normalized messageChatId:", messageChatId);
       console.log("   Normalized currentActiveChatId:", currentActiveChatIdStr);
@@ -309,14 +322,12 @@ export default function ChatShell({
       
       if (!messageChatId) {
         console.error("❌ Message has no chatId! Cannot process message.");
-        console.error("   Message object:", message);
+        console.error("   Message object:", JSON.stringify(message, null, 2));
         return;
       }
       
-      if (!currentActiveChatIdStr) {
-        console.error("❌ No active chat ID! Cannot process message.");
-        return;
-      }
+      // Don't return early if no active chat - we still want to update sidebar
+      // But we'll only add to messages if there's an active chat match
       
       // Update chats list (sidebar) - this should always happen
       setChats((prev) => {
@@ -352,10 +363,28 @@ export default function ChatShell({
       });
 
       // Add message to active chat if it matches - use functional update to get latest state
-      // Use both strict and loose comparison to handle edge cases
-      const isMatch = messageChatId === currentActiveChatIdStr || messageChatId == currentActiveChatIdStr;
+      // Use multiple comparison methods to handle edge cases
+      const normalizedMessageChatId = messageChatId?.toLowerCase?.() || messageChatId;
+      const normalizedActiveChatId = currentActiveChatIdStr?.toLowerCase?.() || currentActiveChatIdStr;
       
-      if (isMatch) {
+      const isMatch = (normalizedMessageChatId === normalizedActiveChatId) || 
+                      (messageChatId === currentActiveChatIdStr) || 
+                      (messageChatId == currentActiveChatIdStr) ||
+                      (String(messageChatId) === String(currentActiveChatIdStr));
+      
+      console.log("🔍 Message matching check:", {
+        messageChatId,
+        currentActiveChatIdStr,
+        normalizedMessageChatId,
+        normalizedActiveChatId,
+        strictMatch: messageChatId === currentActiveChatIdStr,
+        looseMatch: messageChatId == currentActiveChatIdStr,
+        normalizedMatch: normalizedMessageChatId === normalizedActiveChatId,
+        stringMatch: String(messageChatId) === String(currentActiveChatIdStr),
+        isMatch,
+      });
+      
+      if (isMatch && currentActiveChatIdStr) {
         console.log("✅✅✅ MATCH! Message is for active chat, adding to messages list");
         
         // If chat is active, mark messages as read immediately and reset unreadCount
@@ -476,12 +505,22 @@ export default function ChatShell({
     socket.on("typing:stop", handleTypingStop);
     
     console.log("   Registering 'chat:message' listener");
-    socket.on("chat:message", handleMessage);
+    socket.on("chat:message", (message) => {
+      console.log("🔔 SOCKET EVENT TRIGGERED: chat:message");
+      console.log("   Raw message received:", message);
+      handleMessage(message);
+    });
     
     console.log("   Registering 'chat:refresh' listener");
     socket.on("chat:refresh", handleChatRefresh);
     
-    // Test: Emit a test event to verify socket is working
+    // Debug: Listen to all events to verify socket is receiving messages
+    socket.onAny((eventName, ...args) => {
+      if (eventName === "chat:message") {
+        console.log("🎯 Socket.onAny detected chat:message event:", args);
+      }
+    });
+    
     console.log("   ✅ All socket event listeners registered");
     console.log("   📡 Listening for: user:online, typing:start, typing:stop, chat:message, chat:refresh");
 
