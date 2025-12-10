@@ -254,15 +254,18 @@ export default function AuthForm({ mode = "login", onModeChange }) {
         mode === "login" ? "Welcome back to ChatX!" : "Account created successfully!",
       );
       
-      // Wait for cookie to be set in browser (increased delay for Render and server-side cookie sync)
-      // This ensures the cookie is available when the server component checks for authentication
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Wait for cookie to be set in browser (cookie is set by backend in HttpOnly cookie)
+      // Small delay to ensure cookie is available for server-side components
+      await new Promise((resolve) => setTimeout(resolve, 500));
       
-      // Use window.location.href for reliable redirect
-      // This ensures server-side components can immediately read the cookie
-      // router.replace() might not trigger server-side re-render fast enough on Render
+      // Use router.replace for smooth client-side navigation without page refresh
+      // This provides instant navigation without full page reload
       console.log("Redirecting to /chat...");
-      window.location.href = "/chat";
+      
+      // Use router.replace (not push) to avoid adding to history stack
+      // This prevents back button from going back to login page
+      // The server component will automatically re-fetch with the new cookie
+      router.replace("/chat");
     } catch (error) {
       console.error(`❌ ${mode === "login" ? "Login" : "Register"} error:`, error);
       toast.error(error.message);
