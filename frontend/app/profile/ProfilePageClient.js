@@ -50,6 +50,8 @@ export default function ProfilePageClient({ initialUser }) {
     phone: false,
   });
   const hasCheckedAuthRef = useRef(false);
+  const hasLoadedProfileRef = useRef(false); // Track if we've already loaded profile to prevent infinite loops
+  const isLoadingProfileRef = useRef(false); // Track if profile is currently loading
 
   // Client-side auth check
   useEffect(() => {
@@ -58,6 +60,7 @@ export default function ProfilePageClient({ initialUser }) {
       console.log("✅ User available from server:", initialUser.email);
       setUser(initialUser);
       setIsLoading(false);
+      hasLoadedProfileRef.current = true; // Mark as loaded since we have initialUser
       return;
     }
 
@@ -80,6 +83,7 @@ export default function ProfilePageClient({ initialUser }) {
               console.log("✅ User found:", data.user.email);
               setUser(data.user);
               setIsLoading(false);
+              hasLoadedProfileRef.current = true; // Mark as loaded
             } else {
               console.log("❌ No user in response, redirecting to login");
               router.replace("/login");
@@ -110,8 +114,8 @@ export default function ProfilePageClient({ initialUser }) {
         avatar: user.avatar || "",
       });
       setAvatarPreview(user.avatar || null);
-      // Refresh user data
-      loadProfile();
+      // Don't call loadProfile here - it causes infinite loop
+      // Profile is already loaded from initialUser or auth check
     }
   }, [user]);
 
@@ -123,8 +127,22 @@ export default function ProfilePageClient({ initialUser }) {
   }, [user?.avatar]);
 
   const loadProfile = async () => {
+    // Prevent duplicate calls
+    if (isLoadingProfileRef.current) {
+      console.log("⚠️ Profile already loading, skipping...");
+      return;
+    }
+    
+    // Don't reload if we've already loaded profile
+    if (hasLoadedProfileRef.current) {
+      console.log("✅ Profile already loaded, skipping reload...");
+      return;
+    }
+    
     try {
+      isLoadingProfileRef.current = true;
       const profileData = await getProfile();
+      hasLoadedProfileRef.current = true; // Mark as loaded
       setUser(profileData);
       setFormData({
         username: profileData?.username || "",
@@ -133,7 +151,10 @@ export default function ProfilePageClient({ initialUser }) {
         avatar: profileData?.avatar || "",
       });
     } catch (error) {
+      console.error("❌ Failed to load profile:", error);
       toast.error("Failed to load profile");
+    } finally {
+      isLoadingProfileRef.current = false;
     }
   };
 

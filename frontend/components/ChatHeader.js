@@ -17,14 +17,40 @@ export default function ChatHeader({ chat, onlineUsers = [], onBack, onMenuClick
       <motion.header
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-      className="glass-panel flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-6 sm:py-4"
-      role="banner"
+        className="glass-panel flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-6 sm:py-4"
+        role="banner"
       >
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-primary-400">ChatX</p>
-        <h2 className="text-lg font-semibold text-dark-text sm:text-xl">
-            Select a chat to start messaging
-          </h2>
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {/* Menu Button (Mobile - Opens Sidebar) - Show even when no chat */}
+          {onMenuClick && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onMenuClick}
+              className="lg:hidden flex-shrink-0 rounded-lg p-2 text-dark-text hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-primary-500 touch-manipulation"
+              aria-label="Open sidebar"
+            >
+              <svg
+                className="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </motion.button>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs uppercase tracking-[0.3em] text-primary-400">ChatX</p>
+            <h2 className="text-lg font-semibold text-dark-text sm:text-xl">
+              Select a chat to start messaging
+            </h2>
+          </div>
         </div>
       </motion.header>
     );
@@ -43,7 +69,7 @@ export default function ChatHeader({ chat, onlineUsers = [], onBack, onMenuClick
       role="banner"
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-4">
-        {/* Menu Button (Mobile - Opens Sidebar) */}
+        {/* Menu Button (Mobile - Opens Sidebar) - Always show on mobile */}
         {onMenuClick && (
           <motion.button
             whileHover={{ scale: 1.05 }}

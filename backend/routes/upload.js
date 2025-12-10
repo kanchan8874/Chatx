@@ -38,14 +38,33 @@ router.use(async (req, res, next) => {
 
 router.post("/", upload.single("file"), async (req, res) => {
   try {
-    const user = await getUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded." });
     }
+
+    // Check if this is an avatar upload (image file)
+    // Avatar uploads during registration don't require authentication
+    const isAvatarUpload = req.file.mimetype.startsWith("image/");
+    
+    // For non-image files (documents), require authentication
+    // For image files (avatars), authentication is optional (for registration)
+    if (!isAvatarUpload) {
+      const user = await getUserFromRequest(req);
+      if (!user) {
+        return res.status(401).json({ error: "Unauthorized. Please log in to upload documents." });
+      }
+    }
+    
+    // Log upload attempt (with or without auth)
+    const user = await getUserFromRequest(req);
+    console.log(" Uploading file to Cloudinary:", {
+      originalName: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      isAvatarUpload,
+      authenticated: !!user,
+      userId: user?.id || "anonymous (registration)",
+    });
 
     console.log(" Uploading file to Cloudinary:", {
       originalName: req.file.originalname,

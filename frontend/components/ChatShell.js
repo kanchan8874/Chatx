@@ -26,7 +26,27 @@ export default function ChatShell({
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [typingMap, setTypingMap] = useState({});
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // On mobile, show sidebar by default if no chat is selected
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // Show sidebar on mobile if no active chat is selected
+    if (typeof window !== "undefined") {
+      const isMobile = window.innerWidth < 1024; // lg breakpoint
+      // Show sidebar on mobile when no chat is selected (new users or empty state)
+      return isMobile && !serverActiveChatId && (!initialChats || initialChats.length === 0);
+    }
+    return false;
+  });
+  
+  // Auto-open sidebar on mobile when chats are loaded but no chat is selected
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isMobile = window.innerWidth < 1024;
+      if (isMobile && !activeChatId && chats.length > 0 && !isSidebarOpen) {
+        // Auto-open sidebar when chats are available but none selected
+        setIsSidebarOpen(true);
+      }
+    }
+  }, [chats.length, activeChatId, isSidebarOpen]);
 
   const { socket } = useSocket(user);
   const apiBase = useMemo(() => getBrowserApiBase(), []);
@@ -35,6 +55,9 @@ export default function ChatShell({
   const activeChatIdRef = useRef(activeChatId);
   const messagesRef = useRef(messages);
   const isLoadingMessagesRef = useRef(isLoadingMessages);
+  const failedChatIdsRef = useRef(new Set()); // Track failed chat IDs to prevent infinite retries
+  const loadingAttemptsRef = useRef(new Set()); // Track ongoing load attempts to prevent duplicate calls
+  const lastLoadedChatIdRef = useRef(null); // Track the last chatId we successfully loaded messages for
   
   useEffect(() => {
     activeChatIdRef.current = activeChatId;
@@ -58,15 +81,31 @@ export default function ChatShell({
     async (chatId) => {
       if (!chatId) return;
       
+      const chatIdStr = chatId?.toString();
+      
+      // Don't retry if this chat ID has already failed (prevents infinite loops)
+      if (failedChatIdsRef.current.has(chatIdStr)) {
+        console.warn(`⚠️ Skipping loadMessages for chat ${chatIdStr} - previous load failed`);
+        return;
+      }
+      
       // Don't reload if we're already loading (use ref to avoid dependency)
       if (isLoadingMessagesRef.current) {
         console.log("⚠️ Already loading messages, skipping...");
         return;
       }
       
+      // Don't reload if we're already attempting to load this specific chat
+      if (loadingAttemptsRef.current.has(chatIdStr)) {
+        console.log(`⚠️ Already attempting to load messages for chat ${chatIdStr}, skipping...`);
+        return;
+      }
+      
+      // Mark this chat as being loaded
+      loadingAttemptsRef.current.add(chatIdStr);
+      
       // Get current messages using ref to avoid stale closure
       const currentMessages = messagesRef.current;
-      const chatIdStr = chatId?.toString();
       
       setIsLoadingMessages(true);
       console.log(`📥 Loading messages for chat: ${chatId}`);
@@ -123,9 +162,32 @@ export default function ChatShell({
         
         console.log(`📥 Merged messages: ${existingMessages.length} existing + ${newMessages.length} new = ${mergedMessages.length} total`);
         setMessages(mergedMessages);
+        // Mark this chat as successfully loaded
+        lastLoadedChatIdRef.current = chatIdStr;
+        // Clear loading attempt on success
+        loadingAttemptsRef.current.delete(chatIdStr);
       } catch (error) {
         console.error("❌ Error loading messages:", error);
-        toast.error(error.message);
+        console.error("   Error details:", {
+          name: error.name,
+          message: error.message,
+          apiBase,
+          chatId,
+        });
+        
+        // Don't show error toast for 401 - prevents infinite retry loops
+        if (error.message?.includes("401") || error.message?.includes("Unauthorized")) {
+          console.warn("   ⚠️ 401 Unauthorized - stopping retry to prevent infinite loop");
+          // Mark this chat as failed to prevent infinite retries
+          if (chatIdStr) {
+            failedChatIdsRef.current.add(chatIdStr);
+          }
+          // Don't retry - auth check will handle redirect
+        } else {
+          toast.error(error.message || "Failed to load messages");
+        }
+        // Clear loading attempt on error (but keep failedChatIdsRef to prevent retries)
+        loadingAttemptsRef.current.delete(chatIdStr);
       } finally {
         setIsLoadingMessages(false);
       }
@@ -194,26 +256,65 @@ export default function ChatShell({
       }
     } else if (initialMessages && initialMessages.length === 0 && activeChatId) {
       // If initialMessages is empty array and we have an activeChatId, load messages
-      console.log(`📥 Initial messages empty, loading messages for chat: ${activeChatId}`);
-      loadMessages(activeChatId);
+      // But only if this chat hasn't failed before and we haven't already loaded it
+      const chatIdStr = activeChatId?.toString();
+      
+      // Don't reload if we just loaded this chatId
+      if (lastLoadedChatIdRef.current === chatIdStr) {
+        console.log(`✅ Already loaded messages for chat ${chatIdStr}, skipping initial load...`);
+        return;
+      }
+      
+      if (!failedChatIdsRef.current.has(chatIdStr)) {
+        console.log(`📥 Initial messages empty, loading messages for chat: ${activeChatId}`);
+        loadMessages(activeChatId);
+      } else {
+        console.warn(`⚠️ Skipping load for chat ${chatIdStr} - previous load failed`);
+      }
     }
   }, [initialMessages, activeChatId, loadMessages]);
 
   // Load messages when activeChatId changes (from props or selection)
+  // Use ref to check messages to avoid stale closure
   useEffect(() => {
-    if (activeChatId && !isLoadingMessages) {
-      // Check if we already have messages for this chat
-      const hasMessagesForChat = messages.length > 0 && 
-        (messages[0]?.chatId === activeChatId || messages[0]?.chatId === activeChatId?.toString());
-      
-      if (!hasMessagesForChat) {
-        console.log(`📥 Loading messages for active chat: ${activeChatId}`);
-        loadMessages(activeChatId);
-      } else {
-        console.log(`✅ Already have ${messages.length} messages for chat: ${activeChatId}`);
-      }
+    if (!activeChatId || isLoadingMessages) {
+      return;
     }
-  }, [activeChatId, loadMessages, isLoadingMessages]);
+    
+    const chatIdStr = activeChatId?.toString();
+    
+    // Don't reload if we just loaded this chatId (prevents infinite loops)
+    if (lastLoadedChatIdRef.current === chatIdStr) {
+      console.log(`✅ Already loaded messages for chat ${chatIdStr} in this session, skipping...`);
+      return;
+    }
+    
+    // Don't retry if this chat ID has already failed (prevents infinite loops)
+    if (failedChatIdsRef.current.has(chatIdStr)) {
+      console.warn(`⚠️ Skipping load for chat ${chatIdStr} - previous load failed`);
+      return;
+    }
+    
+    // Use ref to get latest messages state
+    const currentMessages = messagesRef.current;
+    
+    // Check if we already have messages for this chat
+    const hasMessagesForChat = currentMessages.length > 0 && 
+      currentMessages.some((m) => {
+        const mChatId = m.chatId?.toString();
+        return mChatId === chatIdStr || mChatId === activeChatId;
+      });
+    
+    if (!hasMessagesForChat) {
+      console.log(`📥 Loading messages for active chat: ${activeChatId}`);
+      // loadMessages will check failedChatIdsRef again, but this prevents unnecessary calls
+      loadMessages(activeChatId);
+    } else {
+      // Mark as loaded even if we already have messages
+      lastLoadedChatIdRef.current = chatIdStr;
+      console.log(`✅ Already have ${currentMessages.length} messages for chat: ${activeChatId}`);
+    }
+  }, [activeChatId, loadMessages, isLoadingMessages]); // Don't add messages to deps - use ref instead
 
   useEffect(() => {
     if (!serverActiveChatId && initialChats.length && !activeChatId) {
@@ -610,13 +711,9 @@ export default function ChatShell({
             // Check again after reloading
             const stillExists = data.chats.some((chat) => chat.id === chatId || chat.id?.toString() === newChatIdStr);
             if (stillExists) {
+              // Just set activeChatId - useEffect will handle loading messages automatically
+              // Don't call loadMessages here to avoid duplicate calls
               setActiveChatId(chatId);
-              // Only load messages if we don't already have them
-              const hasMessages = messages.length > 0 && 
-                (messages[0]?.chatId === chatId || messages[0]?.chatId?.toString() === newChatIdStr);
-              if (!hasMessages) {
-                loadMessages(chatId);
-              }
             } else {
               console.error(`❌ Chat ${chatId} still not found after reload`);
             }
@@ -628,19 +725,17 @@ export default function ChatShell({
       return;
     }
     
-    // Update active chat - only load messages if we don't already have them for this chat
-    setActiveChatId(chatId);
-    
-    // Check if we already have messages for this chat
-    const hasMessagesForChat = messages.length > 0 && 
-      (messages[0]?.chatId === chatId || messages[0]?.chatId?.toString() === newChatIdStr);
-    
-    if (!hasMessagesForChat) {
-      console.log(`📥 Loading messages for chat: ${chatId}`);
-      loadMessages(chatId);
-    } else {
-      console.log(`✅ Already have ${messages.length} messages for chat: ${chatId}, skipping reload`);
+    // Clear failed chat ID, loading attempt, and last loaded chatId when selecting a new chat (allow retry)
+    failedChatIdsRef.current.delete(newChatIdStr);
+    loadingAttemptsRef.current.delete(newChatIdStr);
+    // Only clear lastLoadedChatIdRef if selecting a different chat
+    if (lastLoadedChatIdRef.current !== newChatIdStr) {
+      lastLoadedChatIdRef.current = null;
     }
+    
+    // Update active chat - useEffect will automatically load messages when activeChatId changes
+    // Don't call loadMessages here to avoid duplicate calls and infinite loops
+    setActiveChatId(chatId);
     
     // Close sidebar on mobile after selecting chat
     setIsSidebarOpen(false);
@@ -742,7 +837,7 @@ export default function ChatShell({
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-50 w-80 transform transition-transform duration-300 ease-in-out lg:relative lg:z-auto lg:translate-x-0 ${
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <ChatSidebar
