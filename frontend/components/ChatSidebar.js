@@ -131,13 +131,13 @@ export default function ChatSidebar({
       {/* New Chat Input */}
       <div className="px-3 sm:px-4">
         <form onSubmit={handleCreateChat} className="mb-3 sm:mb-4">
-          <div className="glass-strong flex items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl p-1.5 sm:p-2">
+          <div className="glass-strong flex items-center gap-1 sm:gap-1.5 md:gap-2 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 md:p-2 min-w-0">
             <input
               type="text"
               placeholder="Start new chat..."
               value={invite}
               onChange={(e) => setInvite(e.target.value)}
-              className="flex-1 bg-transparent px-2 py-1.5 sm:px-3 sm:py-2 text-sm sm:text-base text-dark-text placeholder-dark-muted outline-none"
+              className="flex-1 min-w-0 bg-transparent px-2 py-1.5 sm:px-3 sm:py-2 text-sm sm:text-base text-dark-text placeholder-dark-muted outline-none"
               style={{ fontSize: '15px' }}
             />
             <motion.button
@@ -145,10 +145,10 @@ export default function ChatSidebar({
               disabled={isCreating || !invite.trim()}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="rounded-lg sm:rounded-xl bg-gradient-primary px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-semibold uppercase tracking-wider text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-glow-primary touch-manipulation"
-              style={{ fontSize: '14px' }}
+              className="flex-shrink-0 rounded-lg sm:rounded-xl bg-gradient-primary px-2.5 py-1.5 sm:px-3 sm:py-1.5 md:px-4 md:py-2 text-xs sm:text-sm md:text-base font-semibold uppercase tracking-wider text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-glow-primary touch-manipulation whitespace-nowrap"
+              style={{ fontSize: '12px' }}
             >
-              {isCreating ? "..." : "New"}
+              {isCreating ? "..." : "NEW"}
             </motion.button>
           </div>
         </form>
